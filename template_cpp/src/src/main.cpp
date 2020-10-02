@@ -4,13 +4,15 @@
 
 #include "barrier.hpp"
 #include "parser.hpp"
+#include "perfectlink.hpp"
+
 #include "hello.h"
 #include <signal.h>
 //added includes for perfect links
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <unistd.h>
- #include <thread>
+#include <thread>
 static void stop(int) {
   // reset signal handlers to default
   signal(SIGTERM, SIG_DFL);
@@ -27,17 +29,14 @@ static void stop(int) {
 }
 
 
-static void waitPackets(int socketDescriptor){
+static void waitPackets(PerfectLink link){
   
   char dummy;
   std::cout << "Waiting for packets" << std::endl;
-  while(true){
-    if (recv(socketDescriptor, &dummy, sizeof(dummy), 0) < 0) {
-        throw std::runtime_error("Could not read from the barrier socket: " +
-                                std::string(std::strerror(errno)));
-    }else {
+  while(link.deliver(&dummy)){
+    
       std::cout << "Received : " << dummy << std::endl;
-    }
+    
   }
  
 
@@ -125,7 +124,15 @@ int main(int argc, char **argv) {
   struct sockaddr_in server;
   std::memset(&server, 0, sizeof(server));
 
-  int fd = socket(AF_INET, SOCK_DGRAM, 0);
+  PerfectLink perfectLink(localhost.ip, localhost.port);
+  std::thread t1(waitPackets, perfectLink);
+
+  while(true){
+    for(Parser::Host peer: parser.getPeers()){
+      perfectLink.send("h", peer);
+    }
+  }
+  /*int fd = socket(AF_INET, SOCK_DGRAM, 0);
   if (fd < 0) {
     throw std::runtime_error("Could not create the UDP socket: " +
                              std::string(std::strerror(errno)));
@@ -158,7 +165,6 @@ int main(int argc, char **argv) {
 
       }
     }
-  }
-  t1.join();
+  }*/
   return 0;
 }
