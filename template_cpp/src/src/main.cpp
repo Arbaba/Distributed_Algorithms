@@ -13,6 +13,7 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <thread>
+
 static void stop(int) {
   // reset signal handlers to default
   signal(SIGTERM, SIG_DFL);
@@ -31,11 +32,11 @@ static void stop(int) {
 
 static void waitPackets(PerfectLink link){
   
-  char dummy;
+  Packet dummy;
   std::cout << "Waiting for packets" << std::endl;
   while(link.deliver(&dummy)){
     
-      std::cout << "Received : " << dummy << std::endl;
+      std::cout << "Received : " << dummy.payload << std::endl;
     
   }
  
@@ -129,42 +130,10 @@ int main(int argc, char **argv) {
 
   while(true){
     for(Parser::Host peer: parser.getPeers()){
-      perfectLink.send("h", peer);
+      Packet pkt(peer.id, 380, PacketType::FIFO, true);
+      perfectLink.send(&pkt, peer);
     }
   }
-  /*int fd = socket(AF_INET, SOCK_DGRAM, 0);
-  if (fd < 0) {
-    throw std::runtime_error("Could not create the UDP socket: " +
-                             std::string(std::strerror(errno)));
-  }
-
-  server.sin_family = AF_INET;
-  server.sin_addr.s_addr = localhost.ip;
-  server.sin_port = localhost.port;
-  int bindAttempt = bind(fd, reinterpret_cast<sockaddr*>(&server), sizeof(server));
-  if(bindAttempt != 0){
-    stop(bindAttempt);
-  }
-  std::thread t1(waitPackets, fd);
-  usleep(1000000);
-  std::cout << "setup" << std::endl;
-  while(true){
-    sockaddr_in destSocket;
-    std::memset(&destSocket, 0, sizeof(destSocket));
-
-    for(Parser::Host peer: parser.getPeers()){
-      destSocket.sin_family = AF_INET;
-      destSocket.sin_addr.s_addr = peer.ip;
-      destSocket.sin_port = peer.port;
-      if(sendto(fd, "h",1, 0,reinterpret_cast<const sockaddr*>(&destSocket), sizeof(destSocket))){
-        std::cout << "Sent message" << std::endl;
-      }else{
-        std::cout << "Couldn't send message" << std::endl;
-
-        stop(0);
-
-      }
-    }
-  }*/
+  t1.join();
   return 0;
 }
