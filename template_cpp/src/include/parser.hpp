@@ -18,7 +18,6 @@
 #include <cstdlib>
 #include <cstring>
 #include <unistd.h>
-
 class Parser {
 public:
   struct Host {
@@ -93,7 +92,18 @@ public:
 
 public:
   Parser(const int argc, char const *const *argv, bool withConfig)
-      : argc{argc}, argv{argv}, withConfig{withConfig}, parsed{false} {}
+      : argc{argc}, argv{argv}, withConfig{withConfig}, parsed{false} {
+        parse();
+        std::vector<Host> allPeers = hosts();
+        
+        for(Host host: allPeers){
+          if(host.id == id()){
+            localhost = host;
+          }else {
+            peers.push_back(host);
+          }
+        }
+      }
 
   void parse() {
     if (!parseInternal()) {
@@ -195,27 +205,40 @@ public:
     return hosts;
   }
 
+  Host getLocalhost(){
+    return localhost;
+  }
+  
+  std::vector<Host> getPeers(){
+    return peers;
+  }
 private:
   bool parseInternal() {
+    std::cout << "Parse ID" << std::endl;
     if (!parseID()) {
       return false;
     }
+    std::cerr << "Parse host " << std::endl;
 
     if (!parseHostPath()) {
       return false;
     }
+    std::cerr << "Parse barrier" << std::endl;
 
     if (!parseBarrier()) {
       return false;
     }
+    std::cerr << "Parse signal" << std::endl;
 
     if (!parseSignal()) {
       return false;
     }
+    std::cerr << "Parse output" << std::endl;
 
     if (!parseOutputPath()) {
       return false;
     }
+    std::cerr << "Parse config" << std::endl;
 
     if (!parseConfigPath()) {
       return false;
@@ -374,6 +397,7 @@ private:
     rtrim(s);
   }
 
+
 private:
   const int argc;
   char const *const *argv;
@@ -385,6 +409,9 @@ private:
   std::string hostsPath_;
   Host barrier_;
   Host signal_;
+  Host localhost;
+  std::vector<Parser::Host> peers;
   std::string outputPath_;
   std::string configPath_;
+
 };

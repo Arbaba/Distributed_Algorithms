@@ -6,8 +6,11 @@
 #include "parser.hpp"
 #include "hello.h"
 #include <signal.h>
-
-
+//added includes for perfect links
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+ #include <thread>
 static void stop(int) {
   // reset signal handlers to default
   signal(SIGTERM, SIG_DFL);
@@ -23,6 +26,23 @@ static void stop(int) {
   exit(0);
 }
 
+
+static void waitPackets(int socketDescriptor){
+  
+  char dummy;
+  std::cout << "Waiting for packets" << std::endl;
+  while(true){
+    if (recv(socketDescriptor, &dummy, sizeof(dummy), 0) < 0) {
+        throw std::runtime_error("Could not read from the barrier socket: " +
+                                std::string(std::strerror(errno)));
+    }else {
+      std::cout << "Received : " << dummy << std::endl;
+    }
+  }
+ 
+
+
+}
 int main(int argc, char **argv) {
   signal(SIGTERM, stop);
   signal(SIGINT, stop);
@@ -30,9 +50,9 @@ int main(int argc, char **argv) {
   // `true` means that a config file is required.
   // Call with `false` if no config file is necessary.
   bool requireConfig = true;
-
+  std::cout << "parse" << std::endl;
   Parser parser(argc, argv, requireConfig);
-  parser.parse();
+  std::cout << "parse done" << std::endl;
 
   hello();
   std::cout << std::endl;
@@ -101,9 +121,44 @@ int main(int argc, char **argv) {
   coordinator.finishedBroadcasting();
 
 
-  while (true) {
-    std::this_thread::sleep_for(std::chrono::seconds(60));
+  Parser::Host localhost = parser.getLocalhost();
+  struct sockaddr_in server;
+  std::memset(&server, 0, sizeof(server));
+
+  int fd = socket(AF_INET, SOCK_DGRAM, 0);
+  if (fd < 0) {
+    throw std::runtime_error("Could not create the UDP socket: " +
+                             std::string(std::strerror(errno)));
   }
 
+  server.sin_family = AF_INET;
+  server.sin_addr.s_addr = localhost.ip;
+  server.sin_port = localhost.port;
+  int bindAttempt = bind(fd, reinterpret_cast<sockaddr*>(&server), sizeof(server));
+  if(bindAttempt != 0){
+    stop(bindAttempt);
+  }
+  std::thread t1(waitPackets, fd);
+  usleep(1000000);
+  std::cout << "setup" << std::endl;
+  while(true){
+    sockaddr_in destSocket;
+    std::memset(&destSocket, 0, sizeof(destSocket));
+
+    for(Parser::Host peer: parser.getPeers()){
+      destSocket.sin_family = AF_INET;
+      destSocket.sin_addr.s_addr = peer.ip;
+      destSocket.sin_port = peer.port;
+      if(sendto(fd, "h",1, 0,reinterpret_cast<const sockaddr*>(&destSocket), sizeof(destSocket))){
+        std::cout << "Sent message" << std::endl;
+      }else{
+        std::cout << "Couldn't send message" << std::endl;
+
+        stop(0);
+
+      }
+    }
+  }
+  t1.join();
   return 0;
 }

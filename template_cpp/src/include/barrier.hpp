@@ -53,7 +53,7 @@ private:
                               std::string(std::strerror(errno)));
     }
 
-    return fd;
+    return fd;  
   }
 
   // From https://stackoverflow.com/questions/32683086/handling-incomplete-write-calls
