@@ -5,7 +5,7 @@
 #include "barrier.hpp"
 #include "parser.hpp"
 #include "perfectlink.hpp"
-
+#include "beb.hpp"
 #include "hello.h"
 #include <signal.h>
 //added includes for perfect links
@@ -34,11 +34,8 @@ static void waitPackets(PerfectLink link){
   
   Packet dummy;
   std::cout << "Waiting for packets" << std::endl;
-  while(link.deliver(&dummy)){
+
     
-      std::cout << "Received : " << dummy.payload << std::endl;
-    
-  }
  
 
 
@@ -119,21 +116,33 @@ int main(int argc, char **argv) {
 
   std::cout << "Signaling end of broadcasting messages\n\n";
   coordinator.finishedBroadcasting();
-
+  
 
   Parser::Host localhost = parser.getLocalhost();
   struct sockaddr_in server;
   std::memset(&server, 0, sizeof(server));
-
-  PerfectLink perfectLink(localhost.ip, localhost.port);
-  std::thread t1(waitPackets, perfectLink);
-
-  while(true){
-    for(Parser::Host peer: parser.getPeers()){
-      Packet pkt(peer.id, 380, PacketType::FIFO, true);
-      perfectLink.send(&pkt, peer);
+ 
+  if(false){
+    PerfectLink perfectLink(localhost.ip, localhost.port, [](Packet p){ std::cout << "Received " << p.payload << std::endl; });
+    while(true){
+      for(Parser::Host peer: parser.getPeers()){
+        Packet pkt(peer.id, 380, PacketType::FIFO, true);
+        perfectLink.send(&pkt, peer);
+      }
     }
+
+  }else{    
+    BeBroadcast beb = BeBroadcast(localhost, parser.getPeers(), [](Packet p){ std::cout << "Received " << p.payload << std::endl; });
+    std::cout << "Broadcasting done" << std::endl;
+    
+    while(true){
+      for(Parser::Host peer: parser.getPeers()){
+        Packet pkt(peer.id, 380, PacketType::FIFO, true);
+       // beb.bebBroadcast(pkt);
+      }
+    }
+      std::cout << "Broadcasting done" << std::endl;
   }
-  t1.join();
+
   return 0;
 }

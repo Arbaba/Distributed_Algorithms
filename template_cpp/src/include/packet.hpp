@@ -1,8 +1,8 @@
 #pragma once 
 enum PacketType{
     ACK,
-    FIFO
-    
+    FIFO,
+    URB
 };
 struct Packet{
     Packet(){}
