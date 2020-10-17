@@ -11,7 +11,6 @@ BeBroadcast::BeBroadcast(Parser::Host localhost, std::vector<Parser::Host> peers
 
 
 void BeBroadcast::bebBroadcast(Packet pkt){
-    std::cout << "Broadcasting" << std::endl;
     for(Parser::Host peer: peers){
         perfectLink->send(&pkt, peer);
     }

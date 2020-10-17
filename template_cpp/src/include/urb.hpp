@@ -1,21 +1,36 @@
-#include "perfectlink.hpp"
+#pragma once
+#include "beb.hpp"
 #include <set>
+
 class UniformBroadcast {
     public:
+        UniformBroadcast(){};
+        UniformBroadcast(Parser::Host localhost, std::vector<Parser::Host> peers,  std::function<void(Packet)> urbDeliver);
 
-        UniformBroadcast(in_addr_t ip, in_port_t port);
 
-        void crash(int processID);
+        void broadcast(Packet msg);
 
-        int broadcast(const Packet *msg);
 
-        int bebDeliver(Packet *pck);
 
-        bool receivedAllAcks(int originID, int messageID);
-        bool tryDelivery(int originID, int messageID);
-
-        int deliver(Packet *pck);
     private:
-        std::set<int> correctProcesses;
+
+        void storeAck(Packet pkt);
+        bool isForwarded(Packet pkt);
+        void addToDelivered(Packet pkt);
+        void addToForwarded(Packet pkt);
+        bool isDelivered(Packet pkt);
+        void tryDelivery(Packet pkt);
+        bool receivedAllAcks(Packet pkt);
+        void crash(size_t processID);
+        void bebDeliver(Packet pkt);
+
+        BeBroadcast* beb;
+        std::set<size_t> correctProcesses;
         //origin -> senderid -> sendr
+        std::function<void(Packet)> urbDeliver;
+        std::vector<Packet> forwarded;
+        std::vector<Packet> acks;
+        std::vector<Packet> delivered;
+        std::vector<Packet> received;
+
 };
