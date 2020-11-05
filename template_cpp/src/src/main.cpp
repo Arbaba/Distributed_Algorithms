@@ -7,6 +7,7 @@
 #include "perfectlink.hpp"
 #include "beb.hpp"
 #include "urb.hpp"
+#include "fifob.hpp"
 #include "hello.h"
 #include <signal.h>
 //added includes for perfect links
@@ -130,7 +131,7 @@ int main(int argc, char **argv) {
   switch (btype){
     case PERFECTLINKTYPE:
       {
-        PerfectLink perfectLink(localhost.ip, localhost.port, [](Packet p){ std::cout << "Received " << p.payload << std::endl; });
+        PerfectLink perfectLink(localhost.ip, localhost.port, [](Packet p){ std::cout << "Received " << p.payload << "from process" << p.peerID << std::endl; });
           while(true){
             for(Parser::Host peer: parser.getPeers()){
               Packet pkt(peer.id, peer.id, 380, PacketType::FIFO, true);
@@ -142,13 +143,15 @@ int main(int argc, char **argv) {
     
     case BEBTYPE:
       {
-        BeBroadcast bebroadcast = BeBroadcast(localhost, parser.getPeers(), [](Packet p){ std::cout << "Received " << p.payload << std::endl; });
+        BeBroadcast bebroadcast = BeBroadcast(localhost, parser.getPeers(), [](Packet p){ std::cout << "Received " << p.payload << "from process" << p.peerID << std::endl; });
         std::cout << "Broadcasting done" << std::endl;
         while(true){
-          for(Parser::Host peer: parser.getPeers()){
-            Packet pkt(peer.id, peer.id, 380, PacketType::FIFO, true);
-            bebroadcast.bebBroadcast(pkt);
-          }
+
+              for(Parser::Host peer: parser.getPeers()){
+                Packet pkt(peer.id, peer.id, 380, PacketType::FIFO, true);
+                bebroadcast.bebBroadcast(pkt);
+              }
+       
         }
           std::cout << "Broadcasting done" << std::endl;
       }
@@ -156,13 +159,41 @@ int main(int argc, char **argv) {
 
     case URBTYPE:
       {
-        UniformBroadcast urb = UniformBroadcast(localhost, parser.getPeers(), [](Packet p){ std::cout << "Received " << p.payload << std::endl; });
+        UniformBroadcast urb = UniformBroadcast(localhost, parser.getPeers(), [](Packet p){ std::cout << "Received " << p.payload << "from process" << p.peerID << std::endl; });
         std::cout << "Broadcasting done" << std::endl;
-        while(true){
-          for(Parser::Host peer: parser.getPeers()){
-            Packet pkt(peer.id, peer.id, 380, PacketType::FIFO, true);
-            urb.broadcast(pkt);
-          }
+        for(int j = 0; j < 20; j++){
+            for(int i = 0; i < 20; i++){          
+              for(Parser::Host peer: parser.getPeers()){
+                Packet pkt(localhost.id, localhost.id, i, PacketType::FIFO, true);
+                urb.broadcast(pkt);
+              }
+            }
+        }
+        std::cout << "Broadcasting done" << std::endl;
+      }
+      break;
+      
+    case FIFOTYPE:
+      {
+        FIFOBroadcast urb = FIFOBroadcast(localhost, parser.getPeers(), [](Packet p){ std::cout << "Received " << p.payload << "from process" << p.peerID << std::endl; });
+        std::cout << "Broadcasting fifo" << std::endl;
+        for(int j = 1; j < 20; j++){
+            for(int i = 20; i > 0; i--){          
+              for(Parser::Host peer: parser.getPeers()){
+                Packet pkt(localhost.id, localhost.id, i, PacketType::FIFO, true);
+                //std::cout << "send fifo" << std::endl;
+      //          try
+                try{
+                  /* code */
+                urb.broadcast(pkt);
+                }
+                catch(const std::exception& e)
+                {
+                  std::cerr << e.what() << '\n';
+                }
+                
+              }
+            }
         }
         std::cout << "Broadcasting done" << std::endl;
       }

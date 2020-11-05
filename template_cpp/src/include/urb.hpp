@@ -4,13 +4,12 @@
 
 class UniformBroadcast {
     public:
+    
         UniformBroadcast(){};
+
         UniformBroadcast(Parser::Host localhost, std::vector<Parser::Host> peers,  std::function<void(Packet)> urbDeliver);
 
-
         void broadcast(Packet msg);
-
-
 
     private:
 
@@ -23,7 +22,8 @@ class UniformBroadcast {
         bool receivedAllAcks(Packet pkt);
         void crash(size_t processID);
         void bebDeliver(Packet pkt);
-
+        
+        Parser::Host localhost;
         BeBroadcast* beb;
         std::set<size_t> correctProcesses;
         //origin -> senderid -> sendr

@@ -44,7 +44,7 @@ int PerfectLink::send(const Packet *msg, Parser::Host peer){
 void PerfectLink::listen(){
     bool deliveryReady = false;
     while(true){
-        std::cout << "Listening"<< std::endl;
+        //std::cout << "Listening"<< std::endl;
         while(!deliveryReady){
             Packet pkt;
             if (recv(fd, &pkt, sizeof(Packet), 0) < 0) {
