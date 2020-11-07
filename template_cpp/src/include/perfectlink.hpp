@@ -11,7 +11,7 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <algorithm>
-
+#include <functional>
 class PerfectLink{
     public:
         PerfectLink(){};

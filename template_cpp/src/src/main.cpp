@@ -15,20 +15,34 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <thread>
+#include <mutex>
 
-void signalHandler( int signum ) {
+std::vector<Packet> broadcasts;
+std::vector<Packet> receivedPackets;
+std::ofstream outputFile;
+std::mutex receivedMutex;
+
+static void signalHandler( int signum ) {
    std::cout << "Interrupt signal (" << signum << ") received.\n";
 
    // cleanup and close up stuff here  
    // terminate program  
-
-   exit(signum);  
+  for(auto && pkt: broadcasts){
+    outputFile << "b " << pkt.payload << std::endl;
+  }
+  receivedMutex.lock();
+  for(auto && pkt: receivedPackets){
+    outputFile << "d " << pkt.senderID << " " << pkt.payload << std::endl;
+  }
+  receivedMutex.unlock();
+  outputFile.close();
+  exit(signum);  
 }
 
 static void stop(int) {
   // reset signal handlers to default
-  signal(SIGTERM, signalHandler);
-  signal(SIGINT, signalHandler);
+  signal(SIGTERM, SIG_DFL);
+  signal(SIGINT, SIG_DFL);
 
   // immediately stop network packet processing
   std::cout << "Immediately stopping network packet processing.\n";
@@ -41,6 +55,11 @@ static void stop(int) {
 }
 
 
+static void receivePacket(Packet p){
+  receivedMutex.lock();
+  receivedPackets.push_back(p);
+  receivedMutex.unlock();
+}
 static void waitPackets(PerfectLink link){
   
   Packet dummy;
@@ -52,8 +71,8 @@ static void waitPackets(PerfectLink link){
 
 }
 int main(int argc, char **argv) {
-  signal(SIGTERM, stop);
-  signal(SIGINT, stop);
+  signal(SIGTERM, signalHandler);
+  signal(SIGINT, signalHandler);
   std::vector<Packet> dummy;
   for(unsigned long i = 0; i < 20; i++){
     Packet pkt(i, i, 1, PacketType::FIFO, true);
@@ -143,7 +162,7 @@ int main(int argc, char **argv) {
   std::cout << "Signaling end of broadcasting messages\n\n";
   coordinator.finishedBroadcasting();
   
-
+  outputFile.open(parser.outputPath());
   Parser::Host localhost = parser.getLocalhost();
   struct sockaddr_in server;
   std::memset(&server, 0, sizeof(server));
@@ -199,7 +218,7 @@ int main(int argc, char **argv) {
       
     case FIFOTYPE:
       {
-        FIFOBroadcast fifo = FIFOBroadcast(localhost, parser.getPeers(), [](Packet p){ std::cout << "Received " << p.payload << "from process" << p.peerID << ";" << std::endl; });
+        FIFOBroadcast fifo = FIFOBroadcast(localhost, parser.getPeers(), [](Packet p){ std::cout << "Received " << p.payload << "from process" << p.peerID << ";" << std::endl; receivePacket(p);});
         std::cout << "Broadcasting fifo" << std::endl;
             for(int i = 20; i > 0; i--){          
               for(Parser::Host peer: parser.getPeers()){
@@ -209,6 +228,7 @@ int main(int argc, char **argv) {
                // try{
                   /* code */
                 fifo.broadcast(pkt);
+                broadcasts.push_back(pkt);
               /*  }
                 catch(const std::exception& e)
                 {*/
