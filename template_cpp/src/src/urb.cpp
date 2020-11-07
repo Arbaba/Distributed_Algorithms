@@ -31,7 +31,7 @@ void UniformBroadcast::broadcast(Packet pkt){
 }
 
 void UniformBroadcast::bebDeliver(Packet pkt){
-    //std::cout << "received pkt " << pkt.peerID << " " << pkt.senderID << " " << pkt.payload << std::endl;
+
     lock.lock();
    storeAck(pkt);
    if(!isForwarded(pkt)){

@@ -157,7 +157,17 @@ int main(int argc, char **argv) {
 
 
   std::cout << "Doing some initialization...\n\n";
-
+unsigned long nMessages = parser.parseNMessages();
+  outputFile.open(parser.outputPath());
+  Parser::Host localhost = parser.getLocalhost();
+  struct sockaddr_in server;
+  std::memset(&server, 0, sizeof(server));
+  enum BROADCASTTYPE{
+    PERFECTLINKTYPE, BEBTYPE, URBTYPE, FIFOTYPE
+  };
+  BROADCASTTYPE btype = BROADCASTTYPE::FIFOTYPE;
+  FIFOBroadcast fifo = FIFOBroadcast(localhost, parser.getPeers(), [localhost](Packet p){ std::cerr << "Received " << p.payload << "from process" << p.peerID << ";" << std::endl; receivePacket(p, localhost.id);});
+    usleep(2000);
   Coordinator coordinator(parser.id(), barrier, signal);
 
   std::cout << "Waiting for all processes to finish initialization\n\n";
@@ -167,16 +177,8 @@ int main(int argc, char **argv) {
   std::cout << "Broadcasting messages...\n\n";
 
 
-  unsigned long nMessages = parser.parseNMessages();
-  outputFile.open(parser.outputPath());
-  Parser::Host localhost = parser.getLocalhost();
-  struct sockaddr_in server;
-  std::memset(&server, 0, sizeof(server));
-  enum BROADCASTTYPE{
-    PERFECTLINKTYPE, BEBTYPE, URBTYPE, FIFOTYPE
-  };
-  BROADCASTTYPE btype = BROADCASTTYPE::FIFOTYPE;
   
+
   switch (btype){
     case PERFECTLINKTYPE:
       {
@@ -224,7 +226,7 @@ int main(int argc, char **argv) {
       
     case FIFOTYPE:
       {
-        FIFOBroadcast fifo = FIFOBroadcast(localhost, parser.getPeers(), [localhost](Packet p){ std::cout << "Received " << p.payload << "from process" << p.peerID << ";" << std::endl; receivePacket(p, localhost.id);});
+
         std::cout << "Broadcasting fifo" << std::endl;
             for(int i = 1; static_cast<unsigned long>(i) <= nMessages; i++){          
                 Packet pkt(localhost.id, localhost.id, i, PacketType::FIFO, true);
@@ -243,7 +245,7 @@ int main(int argc, char **argv) {
     bool shouldFlush = nlocalDeliveries == nMessages;
     receivedMutex.unlock();
     if(shouldFlush){
-        usleep(300000000);
+        //usleep(300000000);
         signalHandler(0);
     }
     usleep(2000);

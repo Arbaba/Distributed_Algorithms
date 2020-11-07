@@ -11,6 +11,7 @@ BeBroadcast::BeBroadcast(Parser::Host localhost, std::vector<Parser::Host> peers
 
 
 void BeBroadcast::bebBroadcast(Packet pkt){
+	//std::cout << "broadcast pkt " << pkt.peerID << "  from " << pkt.senderID << "  seq " << pkt.payload << std::endl;
     for(Parser::Host peer: peers){
         pkt.senderID = localhost.id;
         perfectLink->send(&pkt, peer);
