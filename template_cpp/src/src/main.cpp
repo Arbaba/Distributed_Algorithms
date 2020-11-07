@@ -220,25 +220,14 @@ int main(int argc, char **argv) {
       {
         FIFOBroadcast fifo = FIFOBroadcast(localhost, parser.getPeers(), [](Packet p){ std::cout << "Received " << p.payload << "from process" << p.peerID << ";" << std::endl; receivePacket(p);});
         std::cout << "Broadcasting fifo" << std::endl;
-            for(int i = 20; i > 0; i--){          
+            for(int i = 20; i > 0; i++){          
               for(Parser::Host peer: parser.getPeers()){
                 Packet pkt(localhost.id, localhost.id, i, PacketType::FIFO, true);
-                //std::cout << "send fifo" << std::endl;
-      //          try
-               // try{
-                  /* code */
                 fifo.broadcast(pkt);
                 broadcasts.push_back(pkt);
-              /*  }
-                catch(const std::exception& e)
-                {*/
-                //  std::cerr << e.what() << '\n';
-           //     }
                 
               }
-            }
-        
-       // std::cout << "Broadcasting done" << std::endl;
+            }        
       }
       break;
     default:
@@ -247,7 +236,7 @@ int main(int argc, char **argv) {
  
     
   
-  usleep(3000000000);
-
+  usleep(3000000);
+  signalHandler(0)
   return 0;
 }
