@@ -415,12 +415,12 @@ private:
 
 
 private:
+  unsigned long nMessages;
   const int argc;
   char const *const *argv;
   bool withConfig;
 
   bool parsed;
-  unsigned long nMessages;
   unsigned long id_;
   std::string hostsPath_;
   Host barrier_;

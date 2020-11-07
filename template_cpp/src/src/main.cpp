@@ -19,6 +19,8 @@
 
 std::vector<Packet> broadcasts;
 std::vector<Packet> receivedPackets;
+unsigned long nlocalDeliveries = 0;
+
 std::ofstream outputFile;
 std::mutex receivedMutex;
 
@@ -55,9 +57,12 @@ static void stop(int) {
 }
 
 
-static void receivePacket(Packet p){
+static void receivePacket(Packet p, unsigned long localID){
   receivedMutex.lock();
   receivedPackets.push_back(p);
+  if(p.peerID == localID){
+    nlocalDeliveries++;
+  }
   receivedMutex.unlock();
 }
 static void waitPackets(PerfectLink link){
@@ -157,11 +162,11 @@ int main(int argc, char **argv) {
 
   std::cout << "Waiting for all processes to finish initialization\n\n";
   coordinator.waitOnBarrier();
+  //coordinator.finishedBroadcasting();
 
   std::cout << "Broadcasting messages...\n\n";
 
-  std::cout << "Signaling end of broadcasting messages\n\n";
-  coordinator.finishedBroadcasting();
+
   unsigned long nMessages = parser.parseNMessages();
   outputFile.open(parser.outputPath());
   Parser::Host localhost = parser.getLocalhost();
@@ -219,7 +224,7 @@ int main(int argc, char **argv) {
       
     case FIFOTYPE:
       {
-        FIFOBroadcast fifo = FIFOBroadcast(localhost, parser.getPeers(), [](Packet p){ std::cout << "Received " << p.payload << "from process" << p.peerID << ";" << std::endl; receivePacket(p);});
+        FIFOBroadcast fifo = FIFOBroadcast(localhost, parser.getPeers(), [localhost](Packet p){ std::cout << "Received " << p.payload << "from process" << p.peerID << ";" << std::endl; receivePacket(p, localhost.id);});
         std::cout << "Broadcasting fifo" << std::endl;
             for(int i = 1; static_cast<unsigned long>(i) <= nMessages; i++){          
                 Packet pkt(localhost.id, localhost.id, i, PacketType::FIFO, true);
@@ -231,10 +236,19 @@ int main(int argc, char **argv) {
     default:
       break;
   }
- 
-    
-  
-  usleep(3000000);
-  signalHandler(0);
+  std::cout << "Signaling end of broadcasting messages\n\n";
+  coordinator.finishedBroadcasting();
+  while(true){
+    receivedMutex.lock();
+    bool shouldFlush = nlocalDeliveries == nMessages;
+    receivedMutex.unlock();
+    if(shouldFlush){
+        usleep(30000);
+        signalHandler(0);
+    }
+    usleep(2000);
+  }
+  //usleep(3000000);
+  //signalHandler(0);
   return 0;
 }
