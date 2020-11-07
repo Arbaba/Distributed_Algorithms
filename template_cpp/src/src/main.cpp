@@ -34,7 +34,7 @@ static void signalHandler( int signum ) {
   }
   receivedMutex.lock();
   for(auto && pkt: receivedPackets){
-    outputFile << "d " << pkt.senderID << " " << pkt.payload << std::endl;
+    outputFile << "d " << pkt.peerID << " " << pkt.payload << std::endl;
   }
   receivedMutex.unlock();
   outputFile.close();
@@ -243,7 +243,7 @@ int main(int argc, char **argv) {
     bool shouldFlush = nlocalDeliveries == nMessages;
     receivedMutex.unlock();
     if(shouldFlush){
-        usleep(30000);
+        usleep(300000000);
         signalHandler(0);
     }
     usleep(2000);
