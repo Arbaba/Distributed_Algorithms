@@ -1,0 +1,6 @@
+./run.sh --id 1 --hosts config/hosts.txt --barrier 127.0.0.1:5002 --signal 127.0.0.1:5003 --output output/output.txt config/cfg.txt
+./run.sh --id 2 --hosts config/hosts.txt --barrier 127.0.0.1:5002 --signal 127.0.0.1:5003 --output output/output.txt config/cfg.txt
+./barrier.py  --processes 2 --host 127.0.0.1 --port 5002
+./finishedSignal.py  --processes 2 --host 127.0.0.1 --port 5003
+
+./bin/da_proc --id 2 --hosts config/hosts.txt --barrier 127.0.0.1:5002 --signal 127.0.0.1:5003 --output output/output.txt config/cfg.txt
