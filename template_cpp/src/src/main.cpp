@@ -222,12 +222,9 @@ int main(int argc, char **argv) {
         FIFOBroadcast fifo = FIFOBroadcast(localhost, parser.getPeers(), [](Packet p){ std::cout << "Received " << p.payload << "from process" << p.peerID << ";" << std::endl; receivePacket(p);});
         std::cout << "Broadcasting fifo" << std::endl;
             for(int i = 1; static_cast<unsigned long>(i) <= nMessages; i++){          
-              for(Parser::Host peer: parser.getPeers()){
                 Packet pkt(localhost.id, localhost.id, i, PacketType::FIFO, true);
                 fifo.broadcast(pkt);
                 broadcasts.push_back(pkt);
-                
-              }
             }        
       }
       break;
