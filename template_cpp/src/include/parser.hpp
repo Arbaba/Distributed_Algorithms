@@ -146,7 +146,20 @@ public:
 
     return configPath_.c_str();
   }
+  unsigned long parseNMessages(){
+      std::ifstream configFile;
+      configFile.open (configPath());
+      std::string line;
+      std::getline(configFile, line);
+      std::istringstream iss(line);
+      if (!(iss >> nMessages )) {
+        std::ostringstream os;
+        os << "Parsing for `" << configPath() << "` failed at line " << 1;
+        throw std::invalid_argument(os.str());
+      }
+      return nMessages;
 
+  }
   std::vector<Host> hosts() {
     std::ifstream hostsFile(hostsPath());
     std::vector<Host> hosts;
@@ -181,6 +194,7 @@ public:
 
       hosts.push_back(Host(id, ip, port));
     }
+
 
     if (hosts.size() < 2UL) {
       std::ostringstream os;
@@ -243,6 +257,8 @@ private:
     if (!parseConfigPath()) {
       return false;
     }
+
+    
 
     return true;
   }
@@ -404,7 +420,7 @@ private:
   bool withConfig;
 
   bool parsed;
-
+  unsigned long nMessages;
   unsigned long id_;
   std::string hostsPath_;
   Host barrier_;

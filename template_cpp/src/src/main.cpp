@@ -150,6 +150,7 @@ int main(int argc, char **argv) {
     std::cout << parser.configPath() << "\n\n";
   }
 
+
   std::cout << "Doing some initialization...\n\n";
 
   Coordinator coordinator(parser.id(), barrier, signal);
@@ -161,7 +162,7 @@ int main(int argc, char **argv) {
 
   std::cout << "Signaling end of broadcasting messages\n\n";
   coordinator.finishedBroadcasting();
-  
+  unsigned long nMessages = parser.parseNMessages();
   outputFile.open(parser.outputPath());
   Parser::Host localhost = parser.getLocalhost();
   struct sockaddr_in server;
@@ -220,7 +221,7 @@ int main(int argc, char **argv) {
       {
         FIFOBroadcast fifo = FIFOBroadcast(localhost, parser.getPeers(), [](Packet p){ std::cout << "Received " << p.payload << "from process" << p.peerID << ";" << std::endl; receivePacket(p);});
         std::cout << "Broadcasting fifo" << std::endl;
-            for(int i = 20; i > 0; i++){          
+            for(int i = 1; static_cast<unsigned long>(i) <= nMessages; i++){          
               for(Parser::Host peer: parser.getPeers()){
                 Packet pkt(localhost.id, localhost.id, i, PacketType::FIFO, true);
                 fifo.broadcast(pkt);
@@ -237,6 +238,6 @@ int main(int argc, char **argv) {
     
   
   usleep(3000000);
-  signalHandler(0)
+  signalHandler(0);
   return 0;
 }
