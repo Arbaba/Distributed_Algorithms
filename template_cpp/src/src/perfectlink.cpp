@@ -48,8 +48,7 @@ void PerfectLink::listen(){
         while(!deliveryReady){
             Packet pkt;
             if (recv(fd, &pkt, sizeof(Packet), 0) < 0) {
-                            throw std::runtime_error("Could not read from the perfect link socket: " +
-                                                    std::string(std::strerror(errno)));
+                            throw std::runtime_error("Could not read from the perfect link socket: " +std::string(std::strerror(errno)));
             }else {
                 auto iter = std::find_if(delivered.begin(), delivered.end(), 
                             [&](const Packet& p){return p.equals(pkt);});
@@ -63,5 +62,4 @@ void PerfectLink::listen(){
         deliveryReady = false;
     }
     std::cout << "out"<< std::endl;
-   
 }

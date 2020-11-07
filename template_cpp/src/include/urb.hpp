@@ -1,7 +1,7 @@
 #pragma once
 #include "beb.hpp"
 #include <set>
-
+#include <mutex>
 class UniformBroadcast {
     public:
     
@@ -32,5 +32,6 @@ class UniformBroadcast {
         std::vector<Packet> acks;
         std::vector<Packet> delivered;
         std::vector<Packet> received;
+        std::mutex lock;
 
 };

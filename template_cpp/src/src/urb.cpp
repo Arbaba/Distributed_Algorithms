@@ -13,19 +13,26 @@ UniformBroadcast::UniformBroadcast(Parser::Host localhost, std::vector<Parser::H
 
 
 void UniformBroadcast::crash(size_t processID){
+    lock.lock();
     correctProcesses.erase(processID);
+    lock.unlock();
 }
 
 void UniformBroadcast::broadcast(Packet pkt){
+    lock.lock();
+    //std::cout << "URBBroadcast" << pkt.payload<< std::endl;
     addToForwarded(pkt);
     storeAck(pkt);
+    lock.unlock(),
     beb->bebBroadcast(pkt);
+    lock.lock();
     tryDelivery(pkt);
+    lock.unlock();
 }
 
 void UniformBroadcast::bebDeliver(Packet pkt){
     //std::cout << "received pkt " << pkt.peerID << " " << pkt.senderID << " " << pkt.payload << std::endl;
-
+    lock.lock();
    storeAck(pkt);
    if(!isForwarded(pkt)){
        addToForwarded(pkt);
@@ -36,6 +43,7 @@ void UniformBroadcast::bebDeliver(Packet pkt){
        beb->bebBroadcast(ack);
    }
    tryDelivery(pkt);
+   lock.unlock();
 }
 
 bool UniformBroadcast::isForwarded(Packet pkt){
@@ -73,10 +81,10 @@ bool UniformBroadcast::receivedAllAcks(Packet pkt){
 }
 
 void UniformBroadcast::tryDelivery(Packet pkt){
-    //std::cout << "check " << pkt.peerID << " " << pkt.payload << receivedAllAcks(pkt) << isForwarded(pkt) << !isDelivered(pkt) << std::endl;
+    //std::cout << "check " << pkt.peerID << " " << pkt.payload << " " << pkt.senderID << receivedAllAcks(pkt) << isForwarded(pkt) << !isDelivered(pkt) << std::endl;
     if(receivedAllAcks(pkt) && isForwarded(pkt) && !isDelivered(pkt)){
         addToDelivered(pkt);
-        //std::cout << "deliver" << pkt.peerID << " " << pkt.payload  << std::endl;
+        std::cout << "URBdeliver" << pkt.peerID << " " << pkt.payload  << std::endl;
         this->urbDeliver(pkt);
     }
 }

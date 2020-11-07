@@ -2,7 +2,7 @@
 
 #include "urb.hpp"
 #include <map>
-
+#include <mutex>
 class FIFOBroadcast{
     public:
         FIFOBroadcast(){};
@@ -24,4 +24,5 @@ class FIFOBroadcast{
         //sequence number of the next message to be frb-delivered from sender p.
         std::map<unsigned long, int> nextToDeliver;
         std::function<void(Packet)> fifoDeliver;
+        std::mutex lock;
 };

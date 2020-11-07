@@ -16,10 +16,19 @@
 #include <unistd.h>
 #include <thread>
 
+void signalHandler( int signum ) {
+   std::cout << "Interrupt signal (" << signum << ") received.\n";
+
+   // cleanup and close up stuff here  
+   // terminate program  
+
+   exit(signum);  
+}
+
 static void stop(int) {
   // reset signal handlers to default
-  signal(SIGTERM, SIG_DFL);
-  signal(SIGINT, SIG_DFL);
+  signal(SIGTERM, signalHandler);
+  signal(SIGINT, signalHandler);
 
   // immediately stop network packet processing
   std::cout << "Immediately stopping network packet processing.\n";
@@ -45,7 +54,22 @@ static void waitPackets(PerfectLink link){
 int main(int argc, char **argv) {
   signal(SIGTERM, stop);
   signal(SIGINT, stop);
+  std::vector<Packet> dummy;
+  for(unsigned long i = 0; i < 20; i++){
+    Packet pkt(i, i, 1, PacketType::FIFO, true);
+    std::cout <<  dummy.capacity() << std::endl;
+  dummy.insert(dummy.begin() , pkt);
 
+  }
+  for(auto x: dummy){
+        //std::cerr <<x.peerID << " "<< x.  << std::endl;  
+
+  }
+  for(size_t i = 0; i < 20; i++){
+  
+    std::cerr << i << " " << dummy.at(i).peerID << " " <<dummy.at(i).senderID   << std::endl;  
+  }
+ // return 0;
   // `true` means that a config file is required.
   // Call with `false` if no config file is necessary.
   bool requireConfig = true;
@@ -126,8 +150,8 @@ int main(int argc, char **argv) {
   enum BROADCASTTYPE{
     PERFECTLINKTYPE, BEBTYPE, URBTYPE, FIFOTYPE
   };
-  BROADCASTTYPE btype = BROADCASTTYPE::URBTYPE;
-
+  BROADCASTTYPE btype = BROADCASTTYPE::FIFOTYPE;
+  
   switch (btype){
     case PERFECTLINKTYPE:
       {
@@ -159,7 +183,7 @@ int main(int argc, char **argv) {
 
     case URBTYPE:
       {
-        UniformBroadcast urb = UniformBroadcast(localhost, parser.getPeers(), [](Packet p){ std::cout << "Received " << p.payload << "from process" << p.peerID << std::endl; });
+        UniformBroadcast urb = UniformBroadcast(localhost, parser.getPeers(), [](Packet p){ std::cout << "Received " << p.payload << "from process " << p.peerID <<";"<< std::endl; });
         std::cout << "Broadcasting done" << std::endl;
         for(int j = 0; j < 20; j++){
             for(int i = 0; i < 20; i++){          
@@ -175,27 +199,26 @@ int main(int argc, char **argv) {
       
     case FIFOTYPE:
       {
-        FIFOBroadcast urb = FIFOBroadcast(localhost, parser.getPeers(), [](Packet p){ std::cout << "Received " << p.payload << "from process" << p.peerID << std::endl; });
+        FIFOBroadcast fifo = FIFOBroadcast(localhost, parser.getPeers(), [](Packet p){ std::cout << "Received " << p.payload << "from process" << p.peerID << ";" << std::endl; });
         std::cout << "Broadcasting fifo" << std::endl;
-        for(int j = 1; j < 20; j++){
             for(int i = 20; i > 0; i--){          
               for(Parser::Host peer: parser.getPeers()){
                 Packet pkt(localhost.id, localhost.id, i, PacketType::FIFO, true);
                 //std::cout << "send fifo" << std::endl;
       //          try
-                try{
+               // try{
                   /* code */
-                urb.broadcast(pkt);
-                }
+                fifo.broadcast(pkt);
+              /*  }
                 catch(const std::exception& e)
-                {
-                  std::cerr << e.what() << '\n';
-                }
+                {*/
+                //  std::cerr << e.what() << '\n';
+           //     }
                 
               }
             }
-        }
-        std::cout << "Broadcasting done" << std::endl;
+        
+       // std::cout << "Broadcasting done" << std::endl;
       }
       break;
     default:
@@ -204,6 +227,7 @@ int main(int argc, char **argv) {
  
     
   
+  usleep(3000000000);
 
   return 0;
 }
