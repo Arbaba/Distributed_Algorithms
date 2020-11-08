@@ -12,20 +12,30 @@
 #include <unistd.h>
 #include <algorithm>
 #include <functional>
+#include <map>
+#include <mutex>
 class PerfectLink{
     public:
         PerfectLink(){};
-        PerfectLink(in_addr_t ip, in_port_t port, std::function<void(Packet)> pp2pDeliver);
+        PerfectLink(Parser::Host localhost,  std::function<void(Packet)> pp2pDeliver,  std::function<void(unsigned long)> onCrash, std::map<unsigned long, Parser::Host> idToPeer);
 
         int send(const Packet *msg, Parser::Host peer);
-
         
-        void listen();
+        void listen(unsigned long localID);
+        void resendMessages(unsigned long localID);
+
     private:
+        std::string ackKey(Packet pkt);
+        std::mutex lock;
+        std::vector<Packet> sent;
         std::vector<Packet> delivered;
+        std::map<std::string, Packet> waitingAcks;
+
+        //mapping string of "peerID senderID payload" to boolean
+        std::map<std::string, bool> acked;
         int fd;
         struct sockaddr_in server;
         std::function<void(Packet)>pp2pDeliver;
-
-
+        std::map<unsigned long, Parser::Host> idToPeer;
+        std::function<void(unsigned long)> onCrash;
 };

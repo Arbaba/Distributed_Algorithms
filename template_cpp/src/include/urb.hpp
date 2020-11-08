@@ -7,7 +7,7 @@ class UniformBroadcast {
     
         UniformBroadcast(){};
 
-        UniformBroadcast(Parser::Host localhost, std::vector<Parser::Host> peers,  std::function<void(Packet)> urbDeliver);
+        UniformBroadcast(Parser::Host localhost, std::vector<Parser::Host> peers, std::function<void(Packet)> urbDeliver);
 
         void broadcast(Packet msg);
 

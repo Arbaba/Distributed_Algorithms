@@ -1,9 +1,11 @@
 #include "urb.hpp"
-
+#include <functional>
 UniformBroadcast::UniformBroadcast(Parser::Host localhost, std::vector<Parser::Host> peers, std::function<void(Packet)> urbDeliver){
     this->localhost = localhost;
-    std::function<void(Packet)> callback = [this](Packet pkt){this->bebDeliver(pkt);};
-    beb = new BeBroadcast(localhost, peers, callback);   
+    std::function<void(Packet)> deliveryCB = [this](Packet pkt){this->bebDeliver(pkt);};
+    std::function<void(unsigned long)> crashCB = [this](unsigned long processID){this->crash(processID);};
+
+    beb = new BeBroadcast(localhost, peers, deliveryCB, crashCB);   
     this->urbDeliver = urbDeliver;
     for(auto &&peer: peers){
         correctProcesses.insert(peer.id);
@@ -12,7 +14,7 @@ UniformBroadcast::UniformBroadcast(Parser::Host localhost, std::vector<Parser::H
 }
 
 
-void UniformBroadcast::crash(size_t processID){
+void UniformBroadcast::crash(unsigned long processID){
     lock.lock();
     correctProcesses.erase(processID);
     lock.unlock();

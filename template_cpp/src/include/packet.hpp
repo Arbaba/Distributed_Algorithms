@@ -1,9 +1,13 @@
 #pragma once 
+#include <iostream>
 enum PacketType{
     ACK,
     FIFO,
     URB
 };
+
+
+
 struct Packet{
     Packet(){}
     Packet(unsigned long peerID, unsigned long senderID, int payload, PacketType type, bool ack)
@@ -21,11 +25,43 @@ struct Packet{
     int payload;
     PacketType type;
     bool ack;
+    unsigned long destinationID;
     bool equals(const Packet p) const{
         return peerID == p.peerID 
             && payload == p.payload
             && senderID == p.senderID
             && type == p.type
-            && ack == p.ack;
+            && ack == p.ack
+            && destinationID == p.destinationID;
+    }
+
+    std::string typeToString(PacketType type){
+        std::ostringstream string;
+        switch(type) {
+            case PacketType::ACK:
+                string << "ACK";
+                break;
+            case PacketType::FIFO:
+                string << "FIFO";
+                break;
+            case PacketType::URB:
+                string << "URB";
+                break;
+            default:
+                break;
+        }
+        return string.str();
+    }
+
+    std::string toString()  {
+        std::ostringstream str;
+        str << "Packet(peerID:" << this->peerID 
+                                << " senderID: " << this->senderID
+                                << " destinationID: " << this->destinationID
+                                << " payload: " << this->payload
+                                << " type: " << typeToString(this->type)
+                                << " ack: " << this->ack
+                                << " )";
+        return str.str();
     }
 };

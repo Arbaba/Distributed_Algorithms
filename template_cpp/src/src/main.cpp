@@ -180,6 +180,7 @@ unsigned long nMessages = parser.parseNMessages();
   
 
   switch (btype){
+    /*
     case PERFECTLINKTYPE:
       {
         PerfectLink perfectLink(localhost.ip, localhost.port, [](Packet p){ std::cout << "Received " << p.payload << "from process" << p.peerID << std::endl; });
@@ -223,13 +224,13 @@ unsigned long nMessages = parser.parseNMessages();
         std::cout << "Broadcasting done" << std::endl;
       }
       break;
-      
+      */
     case FIFOTYPE:
       {
 
         std::cout << "Broadcasting fifo" << std::endl;
             for(int i = 1; static_cast<unsigned long>(i) <= nMessages; i++){          
-                Packet pkt(localhost.id, localhost.id, i, PacketType::FIFO, true);
+                Packet pkt(localhost.id, localhost.id, i, PacketType::FIFO, false);
                 fifo.broadcast(pkt);
                 broadcasts.push_back(pkt);
             }        
@@ -245,7 +246,7 @@ unsigned long nMessages = parser.parseNMessages();
     bool shouldFlush = nlocalDeliveries == nMessages;
     receivedMutex.unlock();
     if(shouldFlush){
-        //usleep(300000000);
+        usleep(30000);
         signalHandler(0);
     }
     usleep(2000);
