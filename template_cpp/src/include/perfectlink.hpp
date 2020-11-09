@@ -30,7 +30,7 @@ class PerfectLink{
         std::vector<Packet> sent;
         std::vector<Packet> delivered;
         std::map<std::string, Packet> waitingAcks;
-
+        Parser::Host localhost;
         //mapping string of "peerID senderID payload" to boolean
         std::map<std::string, bool> acked;
         int fd;

@@ -6,6 +6,7 @@ PerfectLink::PerfectLink(Parser::Host localhost,  std::function<void(Packet)> pp
     std::cout << "Create perfect link " << std::endl;
     this->pp2pDeliver = pp2pDeliver; 
     this->onCrash = onCrash;
+    localhost = localhost; 
     fd = socket(AF_INET, SOCK_DGRAM, 0);
     if (fd < 0) {
         throw std::runtime_error("Could not create the UDP socket: " +
@@ -50,9 +51,10 @@ int PerfectLink::send(const Packet *msg, Parser::Host peer){
     destSocket.sin_port = peer.port;
     if(sendto(fd, msg, sizeof(Packet), 0,reinterpret_cast<const sockaddr*>(&destSocket), sizeof(destSocket))){
         //sent.push_back(*msg);
-        lock.lock();
-        if(!msg->ack){
+        if(!msg->ack && !(msg->peerID == localhost.id && msg->senderID == localhost.id && msg->destinationID == localhost.id) ){
+            lock.lock();
             std::string key = ackKey(*msg);
+            
             waitingAcks.insert({key, *msg});
         }
         lock.unlock();
@@ -90,8 +92,8 @@ void PerfectLink::listen(unsigned long localID){
                     if(pkt.ack){
                         std::string key = ackKey(pkt);
                         lock.lock();
-                        std::cout << pkt.toString() << std::endl;
-                        std::cout << "Ack size " << waitingAcks.size() << std::endl;
+                        std::cout << "Received ack for packet: " << pkt.toString() << std::endl;
+                        //std::cout << "Ack size " << waitingAcks.size() << std::endl;
                         std::map<std::string, Packet>::iterator rmIt =  waitingAcks.find(key);
                         
                         if(rmIt !=waitingAcks.end()){
@@ -100,11 +102,15 @@ void PerfectLink::listen(unsigned long localID){
                         std::cout << "Ack size " << waitingAcks.size() << std::endl;
                         lock.unlock();
                     }else{
-                        Packet ack(pkt.peerID, pkt.senderID, pkt.payload, PacketType::ACK, true);
-                        lock.lock();
-                        Parser::Host peer =  idToPeer[pkt.senderID];
-                        lock.unlock();
-                        send(&ack, peer);
+                        if(!(pkt.peerID == localhost.id && pkt.senderID == localhost.id)){
+                            //We send the ack packet to the source by only changing the packet type and ack boolean
+                            Packet ack(pkt.peerID, pkt.senderID, pkt.payload, PacketType::ACK, true);
+                            ack.destinationID = pkt.destinationID;
+                            lock.lock();
+                            Parser::Host peer =  idToPeer[pkt.senderID];
+                            lock.unlock();
+                            send(&ack, peer);
+                        }
                         pp2pDeliver(pkt);
                     }
                 }

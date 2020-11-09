@@ -242,14 +242,14 @@ unsigned long nMessages = parser.parseNMessages();
   std::cout << "Signaling end of broadcasting messages\n\n";
   coordinator.finishedBroadcasting();
   while(true){
-    receivedMutex.lock();
+    /*receivedMutex.lock();
     bool shouldFlush = nlocalDeliveries == nMessages;
     receivedMutex.unlock();
     if(shouldFlush){
         usleep(30000);
         signalHandler(0);
     }
-    usleep(2000);
+    usleep(2000);*/
   }
   //usleep(3000000);
   //signalHandler(0);
