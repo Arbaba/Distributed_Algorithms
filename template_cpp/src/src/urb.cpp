@@ -86,7 +86,7 @@ void UniformBroadcast::tryDelivery(Packet pkt){
     //std::cout << "check " << pkt.peerID << " " << pkt.payload << " " << pkt.senderID << receivedAllAcks(pkt) << isForwarded(pkt) << !isDelivered(pkt) << std::endl;
     if(receivedAllAcks(pkt) && isForwarded(pkt) && !isDelivered(pkt)){
         addToDelivered(pkt);
-        std::cout << "URBdeliver" << pkt.peerID << " " << pkt.payload  << std::endl;
+        //std::cout << "URBdeliver" << pkt.peerID << " " << pkt.payload  << std::endl;
         this->urbDeliver(pkt);
     }
 }

@@ -78,21 +78,7 @@ static void waitPackets(PerfectLink link){
 int main(int argc, char **argv) {
   signal(SIGTERM, signalHandler);
   signal(SIGINT, signalHandler);
-  std::vector<Packet> dummy;
-  for(unsigned long i = 0; i < 20; i++){
-    Packet pkt(i, i, 1, PacketType::FIFO, true);
-    std::cout <<  dummy.capacity() << std::endl;
-  dummy.insert(dummy.begin() , pkt);
-
-  }
-  for(auto x: dummy){
-        //std::cerr <<x.peerID << " "<< x.  << std::endl;  
-
-  }
-  for(size_t i = 0; i < 20; i++){
   
-    std::cerr << i << " " << dummy.at(i).peerID << " " <<dummy.at(i).senderID   << std::endl;  
-  }
  // return 0;
   // `true` means that a config file is required.
   // Call with `false` if no config file is necessary.
@@ -167,7 +153,7 @@ unsigned long nMessages = parser.parseNMessages();
   };
   BROADCASTTYPE btype = BROADCASTTYPE::FIFOTYPE;
   FIFOBroadcast fifo = FIFOBroadcast(localhost, parser.getPeers(), [localhost](Packet p){ std::cerr << "Received " << p.payload << "from process" << p.peerID << ";" << std::endl; receivePacket(p, localhost.id);});
-    usleep(2000);
+  
   Coordinator coordinator(parser.id(), barrier, signal);
 
   std::cout << "Waiting for all processes to finish initialization\n\n";
@@ -242,6 +228,7 @@ unsigned long nMessages = parser.parseNMessages();
   std::cout << "Signaling end of broadcasting messages\n\n";
   coordinator.finishedBroadcasting();
   while(true){
+	std::this_thread::sleep_for(std::chrono::seconds(60));	  
     /*receivedMutex.lock();
     bool shouldFlush = nlocalDeliveries == nMessages;
     receivedMutex.unlock();

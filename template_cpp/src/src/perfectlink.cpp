@@ -31,12 +31,12 @@ PerfectLink::PerfectLink(Parser::Host localhost,  std::function<void(Packet)> pp
 
 void PerfectLink::resendMessages(unsigned long localhostID){
     while(true){
-        usleep(1000000000);
+	    std::this_thread::sleep_for(std::chrono::seconds(1));
         lock.lock();
         std::map<std::string, Packet> toResend = waitingAcks;
         lock.unlock();
         for(auto& [key, pkt]: toResend){
-            std::cout << "Resend " << pkt.toString() << std::endl;
+            //std::cout << "Resend " << pkt.toString() << std::endl;
             send(&pkt, idToPeer[pkt.destinationID]);
         }
     }
@@ -92,14 +92,14 @@ void PerfectLink::listen(unsigned long localID){
                     if(pkt.ack){
                         std::string key = ackKey(pkt);
                         lock.lock();
-                        std::cout << "Received ack for packet: " << pkt.toString() << std::endl;
+			//std::cout << "Received ack for packet: " << pkt.toString() << std::endl;
                         //std::cout << "Ack size " << waitingAcks.size() << std::endl;
                         std::map<std::string, Packet>::iterator rmIt =  waitingAcks.find(key);
                         
                         if(rmIt !=waitingAcks.end()){
                             waitingAcks.erase(rmIt);
                         }
-                        std::cout << "Ack size " << waitingAcks.size() << std::endl;
+                       //std::cout << "Ack size " << waitingAcks.size() << std::endl;
                         lock.unlock();
                     }else{
                         if(!(pkt.peerID == localhost.id && pkt.senderID == localhost.id)){
