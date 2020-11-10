@@ -3,7 +3,8 @@
 enum PacketType{
     ACK,
     FIFO,
-    URB
+    URB,
+    PING
 };
 
 
@@ -47,6 +48,8 @@ struct Packet{
             case PacketType::URB:
                 string << "URB";
                 break;
+            case PacketType::PING:
+                string << "PING";
             default:
                 break;
         }

@@ -1,12 +1,12 @@
 #include "perfectlink.hpp"
 #include "packet.hpp"
 #include <thread>
-
+#include <set>
 PerfectLink::PerfectLink(Parser::Host localhost,  std::function<void(Packet)> pp2pDeliver, std::function<void(unsigned long)> onCrash, std::map<unsigned long, Parser::Host> idToPeer){
     std::cout << "Create perfect link " << std::endl;
     this->pp2pDeliver = pp2pDeliver; 
     this->onCrash = onCrash;
-    localhost = localhost; 
+    this->localhost = localhost; 
     fd = socket(AF_INET, SOCK_DGRAM, 0);
     if (fd < 0) {
         throw std::runtime_error("Could not create the UDP socket: " +
@@ -22,13 +22,48 @@ PerfectLink::PerfectLink(Parser::Host localhost,  std::function<void(Packet)> pp
         throw std::runtime_error("Could not bind the socket local address: " +
                                 std::string(std::strerror(errno)));            
     }
+    for(auto && [id, foo]: idToPeer){
+        correctProcesses.insert(id);
+        countPerProcess.insert({id, 0});
+    }
     std::thread t1(&PerfectLink::listen, this, localhost.id);
-    std::thread t2(&PerfectLink::resendMessages, this, localhost.id);
-    t1.detach();
-    t2.detach();
+    //std::thread t2(&PerfectLink::resendMessages, this, localhost.id);
+    std::thread t3(&PerfectLink::pingPeers, this);
 
+    t1.detach();
+    //t2.detach();
+    t3.detach();
 }
 
+void PerfectLink::crashed(unsigned long processID){
+    //Clean up expected acks
+    lock.lock();
+    
+
+    lock.unlock();
+    onCrash(processID);
+}
+void PerfectLink::pingPeers(){
+    while(correctProcesses.size() > 0){
+	    std::this_thread::sleep_for(std::chrono::seconds(1));
+        
+        for(auto &&id: correctProcesses){
+            lock.lock();
+            int count = countPerProcess[id] + 1;
+            countPerProcess[id] = count;
+            lock.unlock();
+            if(count >= 10){
+                std::cout << "Oh no! process " << id << " crashed! My life is ruined!" << std::endl;
+                onCrash(id);
+            }else{
+                Packet ping(localhost.id, localhost.id, 0, PacketType::PING, false);
+                ping.destinationID = id;
+                std::cout << "Ping " << id << std::endl; 
+                send(&ping, idToPeer[id]);
+            }
+        }
+    }
+}
 void PerfectLink::resendMessages(unsigned long localhostID){
     while(true){
 	    std::this_thread::sleep_for(std::chrono::seconds(1));
@@ -80,7 +115,7 @@ void PerfectLink::listen(unsigned long localID){
             Packet pkt;
             if (recv(fd, &pkt, sizeof(Packet), 0) < 0) {
                             throw std::runtime_error("Could not read from the perfect link socket: " +std::string(std::strerror(errno)));
-            }else {
+            }else if ((pkt.type == PacketType::FIFO) || (pkt.type == PacketType::ACK)){
 		//std::cout << "received pkt " << pkt.peerID << "  from " << pkt.senderID << "  seq " << pkt.payload << std::endl;
                 auto iter = std::find_if(delivered.begin(), delivered.end(), 
                             [&](const Packet& p){return p.equals(pkt);});
@@ -113,6 +148,21 @@ void PerfectLink::listen(unsigned long localID){
                         }
                         pp2pDeliver(pkt);
                     }
+                }
+            }else if(pkt.type == PacketType::PING){
+                std::cout << "Received ping from" << pkt.senderID << std::endl; 
+
+                if(pkt.ack){
+                    lock.lock();
+                    countPerProcess[pkt.destinationID] = 0;
+                    lock.unlock();
+                    std::cout << "Received ping reply from" << pkt.destinationID << std::endl; 
+                }else{
+                    Packet pingReply(pkt.peerID, pkt.senderID, 0, PacketType::PING, true);
+                    pingReply.destinationID = localhost.id;
+                    std::cout << "Send ping reply to" << pkt.senderID << std::endl; 
+
+                    send(&pingReply, idToPeer[pkt.senderID]);
                 }
             }
         }
