@@ -4,10 +4,12 @@
 
 #include "barrier.hpp"
 #include "parser.hpp"
+#include "packet.hpp"
 #include "perfectlink.hpp"
 #include "beb.hpp"
 #include "urb.hpp"
 #include "fifob.hpp"
+#include "fifoController.hpp"
 #include "hello.h"
 #include <signal.h>
 //added includes for perfect links
@@ -152,8 +154,11 @@ unsigned long nMessages = parser.parseNMessages();
     PERFECTLINKTYPE, BEBTYPE, URBTYPE, FIFOTYPE
   };
   BROADCASTTYPE btype = BROADCASTTYPE::FIFOTYPE;
-  FIFOBroadcast fifo = FIFOBroadcast(localhost, parser.getPeers(), [localhost](Packet p){ std::cerr << "Received " << p.payload << "from process" << p.peerID << ";" << std::endl; receivePacket(p, localhost.id);});
-  
+  //FIFOBroadcast fifo = FIFOBroadcast(localhost, parser.getPeers(), [localhost](Packet p){ if(p.payload % 10 ==0) std::cerr << "Received " << p.payload << "from process" << p.peerID << ";" << std::endl; receivePacket(p, localhost.id);});
+  FIFOController fifoController = FIFOController(localhost,
+                                                 parser.getPeers(),
+                                                 [localhost](Packet p){ if(p.payload % 10 ==0) std::cerr << "Received " << p.payload << "from process" << p.peerID << ";" << std::endl; receivePacket(p, localhost.id);},
+                                                 [localhost](Packet p){broadcasts.push_back(p);});
   Coordinator coordinator(parser.id(), barrier, signal);
 
   std::cout << "Waiting for all processes to finish initialization\n\n";
@@ -215,11 +220,12 @@ unsigned long nMessages = parser.parseNMessages();
       {
 
         std::cout << "Broadcasting fifo" << std::endl;
-            for(int i = 1; static_cast<unsigned long>(i) <= nMessages; i++){          
+            /*for(int i = 1; static_cast<unsigned long>(i) <= nMessages; i++){          
                 Packet pkt(localhost.id, localhost.id, i, PacketType::FIFO, false);
                 fifo.broadcast(pkt);
                 broadcasts.push_back(pkt);
-            }        
+            }    */
+            fifoController.broadcast(nMessages);    
       }
       break;
     default:

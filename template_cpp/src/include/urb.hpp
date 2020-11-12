@@ -12,6 +12,7 @@ class UniformBroadcast {
         void broadcast(Packet msg);
 
     private:
+        bool canDeliver(Packet pkt);
 
         void storeAck(Packet pkt);
         bool isForwarded(Packet pkt);

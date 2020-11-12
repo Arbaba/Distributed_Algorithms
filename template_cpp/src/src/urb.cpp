@@ -28,15 +28,22 @@ void UniformBroadcast::broadcast(Packet pkt){
     lock.unlock(),
     beb->bebBroadcast(pkt);
     lock.lock();
-    tryDelivery(pkt);
+    bool d = canDeliver(pkt);
+    if(d){
+        addToDelivered(pkt);
+    }
     lock.unlock();
+    if(d){
+        this->urbDeliver(pkt);
+    }
 }
 
 void UniformBroadcast::bebDeliver(Packet pkt){
 
     lock.lock();
    storeAck(pkt);
-   if(!isForwarded(pkt)){
+   bool isFwded = isForwarded(pkt);
+   if(!isFwded){
        addToForwarded(pkt);
        Packet ack(pkt.peerID, localhost.id , pkt.payload,pkt.type,pkt.ack);
        storeAck(ack);
@@ -44,8 +51,21 @@ void UniformBroadcast::bebDeliver(Packet pkt){
 
        beb->bebBroadcast(ack);
    }
-   tryDelivery(pkt);
-   lock.unlock();
+   /*
+    tryDelivery(pkt);
+    lock.unlock();
+   */
+    bool d = canDeliver(pkt);
+    if(d){
+        addToDelivered(pkt);
+    }
+    lock.unlock();
+    if(d){
+        //std::cout << "URBdeliver" << pkt.peerID << " " << pkt.payload  << std::endl;
+
+        this->urbDeliver(pkt);
+
+    }
 }
 
 bool UniformBroadcast::isForwarded(Packet pkt){
@@ -75,11 +95,16 @@ bool UniformBroadcast::receivedAllAcks(Packet pkt){
         }
     }
     bool receivedAll = true;
+    unsigned long nReceived = 0;
     for(auto &&processID: correctProcesses){
         std::vector<size_t>::iterator match = std::find(senders.begin(), senders.end(), processID);
-        receivedAll = receivedAll && match != senders.end();
+        //receivedAll = receivedAll && match != senders.end();
+        if(match != senders.end()){
+            nReceived += 1;
+        }
     }
-    return receivedAll;
+    //return nReceived > (correctProcesses.size() / 2 );
+    return nReceived > (correctProcesses.size() / 2) ;
 }
 
 void UniformBroadcast::tryDelivery(Packet pkt){
@@ -89,4 +114,10 @@ void UniformBroadcast::tryDelivery(Packet pkt){
         //std::cout << "URBdeliver" << pkt.peerID << " " << pkt.payload  << std::endl;
         this->urbDeliver(pkt);
     }
+}
+
+bool UniformBroadcast::canDeliver(Packet pkt){
+    //std::cout << "check " << pkt.peerID << " " << pkt.payload << " " << pkt.senderID << receivedAllAcks(pkt) << isForwarded(pkt) << !isDelivered(pkt) << std::endl;
+    return (receivedAllAcks(pkt) && isForwarded(pkt) && !isDelivered(pkt));
+    
 }

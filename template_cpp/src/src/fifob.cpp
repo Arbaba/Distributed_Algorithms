@@ -58,6 +58,7 @@ void FIFOBroadcast::urbDeliver(Packet pkt){
     lock.lock();
     addToPending(pkt);
     int seqNb = nextToDeliver.at(pkt.peerID);
+    
     for(size_t i = 0; i < pendingSorted.at(pkt.peerID).size() &&  pendingSorted.at(pkt.peerID).size() > 0; i++){ 
         Packet pendingPacket = pendingSorted.at(pkt.peerID).at(i);
         if(pendingPacket.peerID != pkt.peerID){
@@ -67,8 +68,12 @@ void FIFOBroadcast::urbDeliver(Packet pkt){
         }
         if(pendingPacket.payload ==seqNb){
             seqNb += 1;
+            nextToDeliver[pkt.peerID] = seqNb;
+
+            lock.unlock();
             fifoDeliver(pendingPacket);
-  
+            //std::cout <<"Delivered" << pendingPacket.toString() << std::endl;
+            lock.lock();
         }
     }
     

@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <functional>
 #include <map>
+#include <set>
 #include <mutex>
 class PerfectLink{
     public:
@@ -23,13 +24,16 @@ class PerfectLink{
         
         void listen(unsigned long localID);
         void resendMessages(unsigned long localID);
-
+        void pingPeers();
     private:
+        void crashed(unsigned long processID);
         std::string ackKey(Packet pkt);
         std::mutex lock;
+        std::mutex counterLock;
         std::vector<Packet> sent;
         std::vector<Packet> delivered;
         std::map<std::string, Packet> waitingAcks;
+        std::map<unsigned long, unsigned int> pingCounter;
         Parser::Host localhost;
         //mapping string of "peerID senderID payload" to boolean
         std::map<std::string, bool> acked;
@@ -38,4 +42,6 @@ class PerfectLink{
         std::function<void(Packet)>pp2pDeliver;
         std::map<unsigned long, Parser::Host> idToPeer;
         std::function<void(unsigned long)> onCrash;
+        std::set<unsigned long> correctProcesses;
+        std::map<unsigned long, int> countPerProcess;
 };

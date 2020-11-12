@@ -1,12 +1,12 @@
 #include "perfectlink.hpp"
 #include "packet.hpp"
 #include <thread>
-
+#include <set>
 PerfectLink::PerfectLink(Parser::Host localhost,  std::function<void(Packet)> pp2pDeliver, std::function<void(unsigned long)> onCrash, std::map<unsigned long, Parser::Host> idToPeer){
     std::cout << "Create perfect link " << std::endl;
     this->pp2pDeliver = pp2pDeliver; 
     this->onCrash = onCrash;
-    localhost = localhost; 
+    this->localhost = localhost; 
     fd = socket(AF_INET, SOCK_DGRAM, 0);
     if (fd < 0) {
         throw std::runtime_error("Could not create the UDP socket: " +
@@ -22,13 +22,48 @@ PerfectLink::PerfectLink(Parser::Host localhost,  std::function<void(Packet)> pp
         throw std::runtime_error("Could not bind the socket local address: " +
                                 std::string(std::strerror(errno)));            
     }
+    for(auto && [id, foo]: idToPeer){
+        correctProcesses.insert(id);
+        countPerProcess.insert({id, 0});
+    }
     std::thread t1(&PerfectLink::listen, this, localhost.id);
     std::thread t2(&PerfectLink::resendMessages, this, localhost.id);
+    //std::thread t3(&PerfectLink::pingPeers, this);
+
     t1.detach();
     t2.detach();
-
+    //t3.detach();
 }
 
+void PerfectLink::crashed(unsigned long processID){
+    //Clean up expected acks
+    lock.lock();
+    
+
+    lock.unlock();
+    onCrash(processID);
+}
+void PerfectLink::pingPeers(){
+    while(correctProcesses.size() > 0){
+	    std::this_thread::sleep_for(std::chrono::seconds(1));
+        
+        for(auto &&id: correctProcesses){
+            lock.lock();
+            int count = countPerProcess[id] + 1;
+            countPerProcess[id] = count;
+            lock.unlock();
+            if(count >= 10){
+                //std::cout << "Oh no! process " << id << " crashed! My life is ruined!" << std::endl;
+                onCrash(id);
+            }else{
+                Packet ping(localhost.id, localhost.id, 0, PacketType::PING, false);
+                ping.destinationID = id;
+                //std::cout << "Ping " << id << std::endl; 
+                send(&ping, idToPeer[id]);
+            }
+        }
+    }
+}
 void PerfectLink::resendMessages(unsigned long localhostID){
     while(true){
 	    std::this_thread::sleep_for(std::chrono::seconds(1));
@@ -56,8 +91,8 @@ int PerfectLink::send(const Packet *msg, Parser::Host peer){
             std::string key = ackKey(*msg);
             
             waitingAcks.insert({key, *msg});
+            lock.unlock();
         }
-        lock.unlock();
         return 1;
     }else{
         std::cout << "Couldn't send message" << std::endl;
@@ -76,12 +111,10 @@ void PerfectLink::listen(unsigned long localID){
     bool deliveryReady = false;
     while(true){
         //std::cout << "Listening"<< std::endl;
-        while(!deliveryReady){
             Packet pkt;
             if (recv(fd, &pkt, sizeof(Packet), 0) < 0) {
                             throw std::runtime_error("Could not read from the perfect link socket: " +std::string(std::strerror(errno)));
-            }else {
-		//std::cout << "received pkt " << pkt.peerID << "  from " << pkt.senderID << "  seq " << pkt.payload << std::endl;
+            }else if ((pkt.type == PacketType::FIFO) || (pkt.type == PacketType::ACK)){
                 auto iter = std::find_if(delivered.begin(), delivered.end(), 
                             [&](const Packet& p){return p.equals(pkt);});
                 deliveryReady = (delivered.size() == 0) || iter == delivered.end();
@@ -92,7 +125,7 @@ void PerfectLink::listen(unsigned long localID){
                     if(pkt.ack){
                         std::string key = ackKey(pkt);
                         lock.lock();
-			//std::cout << "Received ack for packet: " << pkt.toString() << std::endl;
+			            //std::cout << "Received ack for packet: " << pkt.toString() << std::endl;
                         //std::cout << "Ack size " << waitingAcks.size() << std::endl;
                         std::map<std::string, Packet>::iterator rmIt =  waitingAcks.find(key);
                         
@@ -102,21 +135,37 @@ void PerfectLink::listen(unsigned long localID){
                        //std::cout << "Ack size " << waitingAcks.size() << std::endl;
                         lock.unlock();
                     }else{
+		                 //std::cout << "received pkt " << pkt.peerID << "  from " << pkt.senderID << "  seq " << pkt.payload << std::endl;
+
                         if(!(pkt.peerID == localhost.id && pkt.senderID == localhost.id)){
                             //We send the ack packet to the source by only changing the packet type and ack boolean
                             Packet ack(pkt.peerID, pkt.senderID, pkt.payload, PacketType::ACK, true);
                             ack.destinationID = pkt.destinationID;
-                            lock.lock();
+                            //lock.lock();
                             Parser::Host peer =  idToPeer[pkt.senderID];
-                            lock.unlock();
+                            //lock.unlock();
                             send(&ack, peer);
                         }
                         pp2pDeliver(pkt);
                     }
                 }
+            }else if(pkt.type == PacketType::PING){
+                //std::cout << "Received ping from" << pkt.senderID << std::endl; 
+
+                if(pkt.ack){
+                    counterLock.lock();
+                    countPerProcess[pkt.destinationID] = 0;
+                    counterLock.unlock();
+                    //std::cout << "Received ping reply from" << pkt.destinationID << std::endl; 
+                }else{
+                    Packet pingReply(pkt.peerID, pkt.senderID, 0, PacketType::PING, true);
+                    pingReply.destinationID = localhost.id;
+                    //std::cout << "Send ping reply to" << pkt.senderID << std::endl; 
+
+                    send(&pingReply, idToPeer[pkt.senderID]);
+                }
             }
-        }
-        deliveryReady = false;
+
     }
     std::cout << "out"<< std::endl;
 }
