@@ -29,6 +29,7 @@ class PerfectLink{
         void crashed(unsigned long processID);
         std::string ackKey(Packet pkt);
         std::mutex lock;
+        std::mutex counterLock;
         std::vector<Packet> sent;
         std::vector<Packet> delivered;
         std::map<std::string, Packet> waitingAcks;
