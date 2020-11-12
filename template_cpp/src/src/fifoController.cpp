@@ -12,9 +12,6 @@ FIFOController::FIFOController(Parser::Host localhost, std::vector<Parser::Host>
 void FIFOController::broadcast(unsigned long n){
     maxPackets = n;
     counter = 1;
-    Packet pkt(localhost.id, localhost.id, 1, PacketType::FIFO, false);
-    broadcastCB(pkt);
-    fifo->broadcast(pkt);
     groupedBroadcast(nPacketsPerBroadcast);
 }
 
