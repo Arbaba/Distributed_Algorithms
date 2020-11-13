@@ -175,7 +175,7 @@ class FifoBroadcastValidation(Validation):
         i = 1
         nextMessage = defaultdict(lambda : 1)
         filename = os.path.basename(filePath)
-
+        nLines = 0
         with open(filePath) as f:
             for lineNumber, line in enumerate(f):
                 tokens = line.split()
@@ -187,7 +187,7 @@ class FifoBroadcastValidation(Validation):
                         print("File {}, Line {}: Messages broadcast out of order. Expected message {} but broadcast message {}".format(filename, lineNumber, i, msg))
                         return False
                     i += 1
-
+                nLines += 1
                 # Check delivery
                 if tokens[0] == 'd':
                     sender = int(tokens[1])
@@ -197,7 +197,9 @@ class FifoBroadcastValidation(Validation):
                         return False
                     else:
                         nextMessage[sender] = msg + 1
-
+        if nLines != self.messages * (self.processes + 1):
+            print("P{}: Found {} messages instead of {}".format(pid, nLines, self.messages * (self.processes + 1)))
+        
         return True
 
 class LCausalBroadcastValidation(Validation):
@@ -383,15 +385,18 @@ def main(processes, messages, runscript, broadcastType, logsDir, testConfig):
         st.run()
         print("StressTest is complete.")
 
-
         print("Resuming stopped processes.")
         st.continueStoppedProcesses()
 
         print("Waiting until all running processes have finished broadcasting.")
         finishSignalThread.join()
-
+        
+        average = 0
         for pid, startTs in OrderedDict(sorted(startTimesFuture.items())).items():
+            average += finishSignal.endTimestamps()[pid] - startTs
             print("Process {} finished broadcasting {} messages in {} ms".format(pid, messages, finishSignal.endTimestamps()[pid] - startTs))
+        average /= len(finishSignal.endTimestamps())
+        print("Average time {}".format(average))
 
         unterminated = st.remainingUnterminatedProcesses()
         if unterminated is not None:
@@ -470,9 +475,9 @@ if __name__ == "__main__":
     testConfig = {
         # Network configuration using the tc command
         'TC': {
-            'delay': ('200ms', '50ms'),
-            'loss': ('10%', '25%'),
-            'reordering': ('25%', '50%')
+            'delay': ('20ms', '10ms'),
+            'loss': ('10%', '15%'),
+            'reordering': ('10%', '15%')
         },
 
         # StressTest configuration
