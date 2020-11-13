@@ -159,7 +159,7 @@ int main(int argc, char **argv) {
   Coordinator coordinator(parser.id(), barrier, signal);
   fifoController = new FIFOController(localhost,
                                                  parser.getPeers(),
-                                                 [localhost](Packet p){ if(p.payload % 10 ==0) std::cerr << "Received " << p.payload << "from process" << p.peerID << ";" << std::endl; receivePacket(p, localhost.id);},
+                                                 [localhost](Packet p){ /*if(p.payload % 50 ==0) std::cout << "Received " << p.payload << "from process" << p.peerID << ";" << "\n"; */receivePacket(p, localhost.id);},
                                                  [localhost](Packet p){broadcasts.push_back(p);},
                                                  &coordinator
                                                  );

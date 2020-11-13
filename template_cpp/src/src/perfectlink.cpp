@@ -58,7 +58,7 @@ void PerfectLink::resendMessages(unsigned long localhostID){
 
         lock.unlock();
 
-        std::cout << "Resend " << toResend.size() << std::endl;
+        //std::cout << "Resend " << toResend.size() << "\n";
         unsigned long count = 0;
         for(auto& [key, pkt]: toResend){
             //std::cout << key <<" Resend " << pkt.toString() << std::endl;
