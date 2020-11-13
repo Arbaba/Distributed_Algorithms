@@ -70,8 +70,10 @@ void PerfectLink::resendMessages(unsigned long localhostID){
         lock.lock();
         std::map<std::string, Packet> toResend = waitingAcks;
         lock.unlock();
+        std::cout << "Resend " << toResend.size() << std::endl;
+
         for(auto& [key, pkt]: toResend){
-            //std::cout << "Resend " << pkt.toString() << std::endl;
+            //std::cout << key <<" Resend " << pkt.toString() << std::endl;
             send(&pkt, idToPeer[pkt.destinationID]);
         }
     }
@@ -117,7 +119,36 @@ void PerfectLink::listen(unsigned long localID){
             }else if ((pkt.type == PacketType::FIFO) || (pkt.type == PacketType::ACK)){
                 auto iter = std::find_if(delivered.begin(), delivered.end(), 
                             [&](const Packet& p){return p.equals(pkt);});
-                deliveryReady = (delivered.size() == 0) || iter == delivered.end();
+                bool deliveryReady = (delivered.size() == 0) || iter == delivered.end();
+                if(iter != delivered.end()){
+                    if(!pkt.ack){
+
+                    
+                        //std::cout << "Received PKT " << pkt.toString() << std::endl; 
+
+                                                //We send the ack packet to the source by only changing the packet type and ack boolean
+                            Packet ack(pkt.peerID, pkt.senderID, pkt.payload, PacketType::ACK, true);
+                            ack.destinationID = pkt.destinationID;
+                            //std::cout << "SEND ACK PKT " << ack.toString() << std::endl; 
+
+                            //lock.lock();
+                            Parser::Host peer =  idToPeer[pkt.senderID];
+                            //lock.unlock();
+                            send(&ack, peer);
+                    }else{
+                                            std::string key = ackKey(pkt);
+                        lock.lock();
+			            //std::cout << "Received ack for packet: " << pkt.toString() << std::endl;
+                        //std::cout << "Ack size " << waitingAcks.size() << std::endl;
+                        std::map<std::string, Packet>::iterator rmIt =  waitingAcks.find(key);
+                        
+                        if(rmIt !=waitingAcks.end()){
+                            waitingAcks.erase(rmIt);
+                        }
+                       //std::cout << "Ack size " << waitingAcks.size() << std::endl;
+                        lock.unlock();
+                    }
+                }
                 if(deliveryReady){
                     //be careful with the unlock
 
@@ -135,7 +166,7 @@ void PerfectLink::listen(unsigned long localID){
                        //std::cout << "Ack size " << waitingAcks.size() << std::endl;
                         lock.unlock();
                     }else{
-		                 //std::cout << "received pkt " << pkt.peerID << "  from " << pkt.senderID << "  seq " << pkt.payload << std::endl;
+		                 std::cout << "received pkt " << pkt.peerID << "  from " << pkt.senderID << "  seq " << pkt.payload << std::endl;
 
                         if(!(pkt.peerID == localhost.id && pkt.senderID == localhost.id)){
                             //We send the ack packet to the source by only changing the packet type and ack boolean

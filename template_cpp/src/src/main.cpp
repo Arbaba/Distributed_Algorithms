@@ -29,6 +29,11 @@ std::mutex receivedMutex;
 static void signalHandler( int signum ) {
    std::cout << "Interrupt signal (" << signum << ") received.\n";
 
+  // immediately stop network packet processing
+  std::cout << "Immediately stopping network packet processing.\n";
+
+  // write/flush output file if necessary
+  std::cout << "Writing output.\n";
    // cleanup and close up stuff here  
    // terminate program  
   for(auto && pkt: broadcasts){
@@ -40,7 +45,7 @@ static void signalHandler( int signum ) {
   }
   receivedMutex.unlock();
   outputFile.close();
-  exit(signum);  
+  exit(0);  
 }
 
 static void stop(int) {
@@ -155,11 +160,13 @@ unsigned long nMessages = parser.parseNMessages();
   };
   BROADCASTTYPE btype = BROADCASTTYPE::FIFOTYPE;
   //FIFOBroadcast fifo = FIFOBroadcast(localhost, parser.getPeers(), [localhost](Packet p){ if(p.payload % 10 ==0) std::cerr << "Received " << p.payload << "from process" << p.peerID << ";" << std::endl; receivePacket(p, localhost.id);});
+  Coordinator coordinator(parser.id(), barrier, signal);
   FIFOController fifoController = FIFOController(localhost,
                                                  parser.getPeers(),
                                                  [localhost](Packet p){ if(p.payload % 10 ==0) std::cerr << "Received " << p.payload << "from process" << p.peerID << ";" << std::endl; receivePacket(p, localhost.id);},
-                                                 [localhost](Packet p){broadcasts.push_back(p);});
-  Coordinator coordinator(parser.id(), barrier, signal);
+                                                 [localhost](Packet p){broadcasts.push_back(p);},
+                                                 &coordinator
+                                                 );
 
   std::cout << "Waiting for all processes to finish initialization\n\n";
   coordinator.waitOnBarrier();
@@ -199,7 +206,7 @@ unsigned long nMessages = parser.parseNMessages();
           std::cout << "Broadcasting done" << std::endl;
       }
       break;
-
+*/
     case URBTYPE:
       {
         UniformBroadcast urb = UniformBroadcast(localhost, parser.getPeers(), [](Packet p){ std::cout << "Received " << p.payload << "from process " << p.peerID <<";"<< std::endl; });
@@ -211,11 +218,13 @@ unsigned long nMessages = parser.parseNMessages();
                 urb.broadcast(pkt);
               }
             }
-        }
+        } 
+        std::cout << "Signaling end of broadcasting messages\n\n";
+        coordinator.finishedBroadcasting();
         std::cout << "Broadcasting done" << std::endl;
       }
       break;
-      */
+      
     case FIFOTYPE:
       {
 
@@ -231,8 +240,7 @@ unsigned long nMessages = parser.parseNMessages();
     default:
       break;
   }
-  std::cout << "Signaling end of broadcasting messages\n\n";
-  coordinator.finishedBroadcasting();
+
   while(true){
 	std::this_thread::sleep_for(std::chrono::seconds(60));	  
     /*receivedMutex.lock();

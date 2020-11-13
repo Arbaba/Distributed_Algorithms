@@ -7,7 +7,7 @@
 class FIFOController{
     public:
         FIFOController(){}
-        FIFOController(Parser::Host localhost, std::vector<Parser::Host> peers, std::function<void(Packet)> fifoDeliver,std::function<void(Packet)> broadcastCB);
+        FIFOController(Parser::Host localhost, std::vector<Parser::Host> peers, std::function<void(Packet)> fifoDeliver,std::function<void(Packet)> broadcastCB, Coordinator* coordinator);
         void broadcast(unsigned long n);
 
         void deliver(Packet pkt);
@@ -21,6 +21,8 @@ class FIFOController{
         FIFOBroadcast* fifo;
         std::function<void(Packet)> fifoDeliver;
         std::function<void(Packet)> broadcastCB;
+        Coordinator* coordinator;
+
         unsigned long nLocalDeliveries;
         unsigned long counter;
 };

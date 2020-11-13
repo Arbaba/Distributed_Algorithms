@@ -24,6 +24,8 @@ class PerfectLink{
         
         void listen(unsigned long localID);
         void resendMessages(unsigned long localID);
+        void handleAck(Packet incoming);
+        void handlePacket(Packet incoming);
         void pingPeers();
     private:
         void crashed(unsigned long processID);
