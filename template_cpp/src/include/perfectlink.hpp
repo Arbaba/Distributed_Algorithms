@@ -18,7 +18,7 @@
 class PerfectLink{
     public:
         PerfectLink(){};
-        PerfectLink(Parser::Host localhost,  std::function<void(Packet)> pp2pDeliver,  std::function<void(unsigned long)> onCrash, std::map<unsigned long, Parser::Host> idToPeer);
+        PerfectLink(Parser::Host localhost,  std::function<void(Packet)> pp2pDeliver, std::map<unsigned long, Parser::Host> idToPeer);
 
         int send(const Packet *msg, Parser::Host peer);
         
@@ -26,16 +26,12 @@ class PerfectLink{
         void resendMessages(unsigned long localID);
         void handleAck(Packet incoming);
         void handlePacket(Packet incoming);
-        void pingPeers();
     private:
-        void crashed(unsigned long processID);
         std::string ackKey(Packet pkt);
         std::mutex lock;
         std::mutex counterLock;
-        std::vector<Packet> sent;
         std::vector<Packet> delivered;
         std::map<std::string, Packet> waitingAcks;
-        std::map<unsigned long, unsigned int> pingCounter;
         Parser::Host localhost;
         //mapping string of "peerID senderID payload" to boolean
         std::map<std::string, bool> acked;
@@ -43,7 +39,6 @@ class PerfectLink{
         struct sockaddr_in server;
         std::function<void(Packet)>pp2pDeliver;
         std::map<unsigned long, Parser::Host> idToPeer;
-        std::function<void(unsigned long)> onCrash;
         std::set<unsigned long> correctProcesses;
         std::map<unsigned long, int> countPerProcess;
 };

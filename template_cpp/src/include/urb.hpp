@@ -21,7 +21,6 @@ class UniformBroadcast {
         bool isDelivered(Packet pkt);
         void tryDelivery(Packet pkt);
         bool receivedAllAcks(Packet pkt);
-        void crash(size_t processID);
         void bebDeliver(Packet pkt);
         
         Parser::Host localhost;
