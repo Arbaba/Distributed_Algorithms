@@ -7,7 +7,7 @@ class FIFOBroadcast{
     public:
         FIFOBroadcast(){};
         FIFOBroadcast(Parser::Host localhost, std::vector<Parser::Host> peers, std::function<void(Packet)> fifoDeliver);
-        
+        void stop();
         void broadcast(Packet pkt);
     private:
         void urbDeliver(Packet pkt);

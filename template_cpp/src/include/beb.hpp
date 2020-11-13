@@ -7,7 +7,7 @@ class BeBroadcast {
         BeBroadcast(){};
         BeBroadcast(Parser::Host localhost, std::vector<Parser::Host> peers, std::function<void(Packet)> bebDeliver);
         void bebBroadcast(Packet pkt);
-        //Packet bebDeliver(Packet pkt);
+        void stop();
     private:
         void pp2pDeliver(Packet);
         Parser::Host localhost;

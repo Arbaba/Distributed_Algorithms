@@ -26,10 +26,11 @@ class PerfectLink{
         void resendMessages(unsigned long localID);
         void handleAck(Packet incoming);
         void handlePacket(Packet incoming);
+        void stop();
     private:
+        bool shouldStop();
         std::string ackKey(Packet pkt);
         std::mutex lock;
-        std::mutex counterLock;
         std::vector<Packet> delivered;
         std::map<std::string, Packet> waitingAcks;
         Parser::Host localhost;
@@ -40,5 +41,6 @@ class PerfectLink{
         std::function<void(Packet)>pp2pDeliver;
         std::map<unsigned long, Parser::Host> idToPeer;
         std::set<unsigned long> correctProcesses;
-        std::map<unsigned long, int> countPerProcess;
+        std::mutex stopLock;
+        bool stopFlag; 
 };

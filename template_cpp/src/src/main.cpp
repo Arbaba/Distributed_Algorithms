@@ -22,16 +22,22 @@
 std::vector<Packet> broadcasts;
 std::vector<Packet> receivedPackets;
 unsigned long nlocalDeliveries = 0;
-
+FIFOController* fifoController = NULL;
 std::ofstream outputFile;
 std::mutex receivedMutex;
 
-static void signalHandler( int signum ) {
+static void signalHandler(int signum) {
+  // reset signal handlers to default
+  signal(SIGTERM, SIG_DFL);
+  signal(SIGINT, SIG_DFL);
+
    std::cout << "Interrupt signal (" << signum << ") received.\n";
 
   // immediately stop network packet processing
   std::cout << "Immediately stopping network packet processing.\n";
-
+  if(fifoController != NULL){
+    fifoController->stop();
+  }
   // write/flush output file if necessary
   std::cout << "Writing output.\n";
    // cleanup and close up stuff here  
@@ -72,16 +78,7 @@ static void receivePacket(Packet p, unsigned long localID){
   }
   receivedMutex.unlock();
 }
-static void waitPackets(PerfectLink link){
-  
-  Packet dummy;
-  std::cout << "Waiting for packets" << std::endl;
 
-    
- 
-
-
-}
 int main(int argc, char **argv) {
   signal(SIGTERM, signalHandler);
   signal(SIGINT, signalHandler);
@@ -150,7 +147,7 @@ int main(int argc, char **argv) {
 
 
   std::cout << "Doing some initialization...\n\n";
-unsigned long nMessages = parser.parseNMessages();
+  unsigned long nMessages = parser.parseNMessages();
   outputFile.open(parser.outputPath());
   Parser::Host localhost = parser.getLocalhost();
   struct sockaddr_in server;
@@ -159,9 +156,8 @@ unsigned long nMessages = parser.parseNMessages();
     PERFECTLINKTYPE, BEBTYPE, URBTYPE, FIFOTYPE
   };
   BROADCASTTYPE btype = BROADCASTTYPE::FIFOTYPE;
-  //FIFOBroadcast fifo = FIFOBroadcast(localhost, parser.getPeers(), [localhost](Packet p){ if(p.payload % 10 ==0) std::cerr << "Received " << p.payload << "from process" << p.peerID << ";" << std::endl; receivePacket(p, localhost.id);});
   Coordinator coordinator(parser.id(), barrier, signal);
-  FIFOController fifoController = FIFOController(localhost,
+  fifoController = new FIFOController(localhost,
                                                  parser.getPeers(),
                                                  [localhost](Packet p){ if(p.payload % 10 ==0) std::cerr << "Received " << p.payload << "from process" << p.peerID << ";" << std::endl; receivePacket(p, localhost.id);},
                                                  [localhost](Packet p){broadcasts.push_back(p);},
@@ -170,13 +166,8 @@ unsigned long nMessages = parser.parseNMessages();
 
   std::cout << "Waiting for all processes to finish initialization\n\n";
   coordinator.waitOnBarrier();
-  //coordinator.finishedBroadcasting();
-
+  //Finished broadcasting will be called by the fifoController once all packets have been broadcasted.
   std::cout << "Broadcasting messages...\n\n";
-
-
-  
-
   switch (btype){
     /*
     case PERFECTLINKTYPE:
@@ -229,12 +220,7 @@ unsigned long nMessages = parser.parseNMessages();
       {
 
         std::cout << "Broadcasting fifo" << std::endl;
-            /*for(int i = 1; static_cast<unsigned long>(i) <= nMessages; i++){          
-                Packet pkt(localhost.id, localhost.id, i, PacketType::FIFO, false);
-                fifo.broadcast(pkt);
-                broadcasts.push_back(pkt);
-            }    */
-            fifoController.broadcast(nMessages);    
+            fifoController->broadcast(nMessages);    
       }
       break;
     default:
@@ -242,17 +228,8 @@ unsigned long nMessages = parser.parseNMessages();
   }
 
   while(true){
-	std::this_thread::sleep_for(std::chrono::seconds(60));	  
-    /*receivedMutex.lock();
-    bool shouldFlush = nlocalDeliveries == nMessages;
-    receivedMutex.unlock();
-    if(shouldFlush){
-        usleep(30000);
-        signalHandler(0);
-    }
-    usleep(2000);*/
+  	std::this_thread::sleep_for(std::chrono::seconds(60));	  
   }
-  //usleep(3000000);
-  //signalHandler(0);
+
   return 0;
 }

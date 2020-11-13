@@ -17,19 +17,8 @@ void FIFOBroadcast::broadcast(Packet pkt){
 }
 
 void FIFOBroadcast::addToPending(Packet pkt){
-   /* std::vector<Packet>::iterator match = std::find_if(pendingSorted.at(pkt.peerID).begin(), pendingSorted.at(pkt.peerID).end(), [pkt](Packet p){return pkt.peerID == p.peerID && pkt.payload < p.payload;});
-    if( pendingSorted.at(pkt.peerID).size() == 0){
-        pendingSorted.at(pkt.peerID).push_back(pkt);
 
-    }else{
-        if(match != pendingSorted.at(pkt.peerID).end()){
-            pendingSorted.at(pkt.peerID).insert(match, pkt);
-        }else{
-            pendingSorted.at(pkt.peerID).push_back(pkt);
-
-        }
-    }
-*/
+    //TODO:Refactor legacy code from previous design. Now should be simpler
     size_t i = 0;
     if(pendingSorted.at(pkt.peerID).size() == 0){
        pendingSorted.at(pkt.peerID).push_back(pkt);
@@ -49,7 +38,9 @@ void FIFOBroadcast::addToPending(Packet pkt){
     }  
      
 }
-
+void FIFOBroadcast::stop(){
+    urb->stop();
+}
 std::vector<Packet>  FIFOBroadcast::pendingOrdered(int processID){
     return pendingSorted.at(processID);
 }

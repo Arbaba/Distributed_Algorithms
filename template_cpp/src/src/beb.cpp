@@ -26,3 +26,6 @@ void BeBroadcast::pp2pDeliver(Packet pkt){
     bebDeliver(pkt);
 }
 
+void BeBroadcast::stop(){
+    perfectLink->stop();
+}

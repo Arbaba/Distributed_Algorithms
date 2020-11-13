@@ -10,7 +10,7 @@ class UniformBroadcast {
         UniformBroadcast(Parser::Host localhost, std::vector<Parser::Host> peers, std::function<void(Packet)> urbDeliver);
 
         void broadcast(Packet msg);
-
+        void stop();
     private:
         bool canDeliver(Packet pkt);
 

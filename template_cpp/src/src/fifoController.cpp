@@ -11,7 +11,7 @@ FIFOController::FIFOController(Parser::Host localhost,
     this->fifo = new FIFOBroadcast(localhost, peers, fifoCB);
     this->broadcastCB = broadcastCB;
     nLocalDeliveries = 1;
-    nPacketsPerBroadcast =100;
+    nPacketsPerBroadcast =10;
     this->coordinator = coordinator;
 }
 void FIFOController::broadcast(unsigned long n){
@@ -33,23 +33,19 @@ void FIFOController::groupedBroadcast(unsigned long n){
     counter += n ;
 }
 void FIFOController::deliver(Packet pkt){
-    //std::cout << "Deliver" << pkt.toString() << std::endl;
     fifoDeliver(pkt);
     if(pkt.peerID == localhost.id){
         nLocalDeliveries += 1;
-        //std::cout << "Counter " << counter << " nLocalDeliveries " << nLocalDeliveries << std::endl;
-        /*if(counter <= maxPackets){
-            Packet next(localhost.id, localhost.id, static_cast<int>(counter), PacketType::FIFO, false);
-            broadcastCB(next);
-            fifo->broadcast(next);
-        }*/
         if(nLocalDeliveries == (maxPackets + 1)){
             std::cout << "Signaling end of broadcasting messages\n\n";
-
             coordinator->finishedBroadcasting();
         }else if(nLocalDeliveries == counter){
             groupedBroadcast(nPacketsPerBroadcast);
         }
     }
     
+}
+
+void FIFOController::stop(){
+    fifo->stop();
 }

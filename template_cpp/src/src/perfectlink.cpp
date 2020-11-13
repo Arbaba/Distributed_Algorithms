@@ -23,8 +23,8 @@ PerfectLink::PerfectLink(Parser::Host localhost,  std::function<void(Packet)> pp
     }
     for(auto && [id, foo]: idToPeer){
         correctProcesses.insert(id);
-        countPerProcess.insert({id, 0});
     }
+    stopFlag = false;
     std::thread t1(&PerfectLink::listen, this, localhost.id);
     std::thread t2(&PerfectLink::resendMessages, this, localhost.id);
     //std::thread t3(&PerfectLink::pingPeers, this);
@@ -34,12 +34,30 @@ PerfectLink::PerfectLink(Parser::Host localhost,  std::function<void(Packet)> pp
     //t3.detach();
 }
 
-
+void PerfectLink::stop(){
+    stopLock.lock();
+    stopFlag = true;
+    stopLock.unlock();
+}
+bool PerfectLink::shouldStop(){
+    stopLock.lock();
+    bool b = stopFlag;
+    stopLock.unlock();
+    return b;
+}
 void PerfectLink::resendMessages(unsigned long localhostID){
     while(true){
+     	std::this_thread::sleep_for(std::chrono::seconds(1));
+
+        if(shouldStop()){
+            return;
+        }
+
         lock.lock();
         std::map<std::string, Packet> toResend = waitingAcks;
+
         lock.unlock();
+
         std::cout << "Resend " << toResend.size() << std::endl;
         unsigned long count = 0;
         for(auto& [key, pkt]: toResend){
@@ -114,6 +132,9 @@ void PerfectLink::handlePacket(Packet pkt){
 void PerfectLink::listen(unsigned long localID){
     while(true){
         //std::cout << "Listening"<< std::endl;
+            if(shouldStop()){
+                return;
+            }
             Packet pkt;
             if (recv(fd, &pkt, sizeof(Packet), 0) < 0) {
                             throw std::runtime_error("Could not read from the perfect link socket: " +std::string(std::strerror(errno)));
@@ -121,13 +142,14 @@ void PerfectLink::listen(unsigned long localID){
                 auto iter = std::find_if(delivered.begin(), delivered.end(), 
                             [&](const Packet& p){return p.equals(pkt);});
                 bool deliveryReady = (delivered.size() == 0) || iter == delivered.end();
+
                 //First time we receive the message. We store and handle it.
                 if(deliveryReady){
                     delivered.push_back(pkt);
                     if(pkt.ack){
                         handleAck(pkt);
                     }else{
-		                std::cout << "received pkt " << pkt.peerID << "  from " << pkt.senderID << "  seq " << pkt.payload << std::endl;
+		                //std::cout << "received pkt " << pkt.peerID << "  from " << pkt.senderID << "  seq " << pkt.payload << std::endl;
                         if(!(pkt.peerID == localhost.id && pkt.senderID == localhost.id)){
                             handlePacket(pkt);
                         }

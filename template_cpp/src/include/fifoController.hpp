@@ -11,7 +11,7 @@ class FIFOController{
         void broadcast(unsigned long n);
 
         void deliver(Packet pkt);
-
+        void stop();
     private:
         void groupedBroadcast(unsigned long n);
         unsigned long nPacketsPerBroadcast;

@@ -12,7 +12,9 @@ UniformBroadcast::UniformBroadcast(Parser::Host localhost, std::vector<Parser::H
     correctProcesses.insert(localhost.id);
 }
 
-
+void UniformBroadcast::stop(){
+    beb->stop();
+}
 
 void UniformBroadcast::broadcast(Packet pkt){
     lock.lock();
