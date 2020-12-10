@@ -7,7 +7,7 @@ import time
 import tempfile
 import threading, subprocess
 import barrier, finishedSignal
-
+import random
 import signal
 import random
 import time
@@ -207,8 +207,16 @@ class LCausalBroadcastValidation(Validation):
         super().__init__(processes, messages, outputDir)
         self.vectorClocksPerProcess = {}
         self.deliveriesPerProcess = {} 
-        for i in range(0, processes + 1):
+        self.causalRelationships = {}
+        for i in range(1, processes + 1):
             self.deliveriesPerProcess[i] = []
+            self.causalRelationships[i] = [i]
+            for j in range(1, processes + 1):
+                #The probability for process i to be dependent on process j is proportional to the process id 
+                if i != j and random.random() < (i - 1) /(float) (processes - 1) :
+                    self.causalRelationships[i].append(j)
+
+        print(self.causalRelationships)
     def generateConfig(self):
         hosts = tempfile.NamedTemporaryFile(mode='w')
         config = tempfile.NamedTemporaryFile(mode='w')
@@ -219,6 +227,10 @@ class LCausalBroadcastValidation(Validation):
         hosts.flush()
 
         config.write("{}\n".format(self.messages))
+        for i in range(1, self.processes + 1):
+            relationships = self.causalRelationships[i]
+            print(relationships)
+            config.write("{}\n".format(' '.join(str(dep) for dep in relationships)))
         config.flush()
 
         return (hosts, config)
@@ -253,10 +265,10 @@ class LCausalBroadcastValidation(Validation):
                         return False
                     else:
                         nextMessage[sender] = msg + 1
-                    #if sender == int(pid):
+                    #map the message to the current vector clock
                     vectorClocks['{} {}'.format(sender, msg)] = list(tmpVectorClock)
+                    #update process vector clock
                     tmpVectorClock[sender - 1] += 1
-                    #print(sender, pid)
 
                     self.deliveriesPerProcess[pid].append({'sender': sender, 'msg': msg})
                     
@@ -265,13 +277,16 @@ class LCausalBroadcastValidation(Validation):
         #print(vectorClocks)
         self.vectorClocksPerProcess[pid] = vectorClocks
         return True
+
     def checkCausality(self):
         for pid, deliveries in self.deliveriesPerProcess.items():
             for delivery in deliveries:
-                senderClock = self.vectorClocksPerProcess[delivery['sender']]['{} {}'.format(delivery['sender'], delivery['msg'])]
-                pClock =  self.vectorClocksPerProcess[pid]['{} {}'.format(delivery['sender'], delivery['msg'])]
+                senderId = delivery['sender']
+                msg = delivery['msg']
+                senderClock = self.vectorClocksPerProcess[senderId]['{} {}'.format(senderId, msg)]
+                pClock =  self.vectorClocksPerProcess[pid]['{} {}'.format(senderId, msg)]
                 for idx, (p, s) in enumerate(zip(pClock, senderClock)):
-                    if p < s:
+                    if idx in self.causalRelationships[senderId] and  p < s:
                         print('Inconsistency found for delivery {} at pid {}. \nProcess clock: {}  \nsender clock: {}'.format(delivery, pid, pClock, senderClock))
                         return False
         return True      
