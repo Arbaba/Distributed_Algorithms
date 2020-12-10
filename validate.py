@@ -207,14 +207,10 @@ class LCausalBroadcastValidation(Validation):
         super().__init__(processes, messages, outputDir)
         self.vectorClocksPerProcess = {}
         self.deliveriesPerProcess = {} 
-        self.causalRelationships = {}
+        self.causalRelationships = causalRelationships
         for i in range(1, processes + 1):
             self.deliveriesPerProcess[i] = []
-            self.causalRelationships[i] = [i]
-            for j in range(1, processes + 1):
-                #The probability for process i to be dependent on process j is proportional to the process id 
-                if i != j and random.random() < (i - 1) /(float) (processes - 1) :
-                    self.causalRelationships[i].append(j)
+
 
         print(self.causalRelationships)
     def generateConfig(self):
@@ -442,7 +438,14 @@ def main(processes, messages, runscript, broadcastType, logsDir, testConfig):
     if broadcastType == "fifo":
         validation = FifoBroadcastValidation(processes, messages, logsDir)
     else:
-        validation = LCausalBroadcastValidation(processes, messages, logsDir, None)
+        causalRelationships = {}
+        for i in range(1, processes + 1):
+            causalRelationships[i] = [i]
+            for j in range(1, processes + 1):
+                #The probability for process i to be dependent on process j is proportional to the process id 
+                if i != j and random.random() < (i - 1) /(float) (processes - 1) :
+                    causalRelationships[i].append(j)
+        validation = LCausalBroadcastValidation(processes, messages, logsDir, causalRelationships)
 
     hostsFile, configFile = validation.generateConfig()
 
