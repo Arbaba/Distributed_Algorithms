@@ -43,6 +43,7 @@ public:
     unsigned long id;
     in_addr_t ip;
     unsigned short port;
+    std::vector<unsigned long> dependencies;
 
   private:
     bool isValidIpAddress(const char *ipAddress) {
@@ -99,6 +100,7 @@ public:
         for(Host host: allPeers){
           if(host.id == id()){
             localhost = host;
+            localhost.dependencies = parseDependencies();
           }else {
             peers.push_back(host);
           }
@@ -159,6 +161,26 @@ public:
       }
       return nMessages;
 
+  }
+  std::vector<unsigned long> parseDependencies(){
+    std::cout << "Parse dependencies" << std::endl;
+    std::vector<unsigned long> dependencies;
+    std::ifstream configFile;
+    configFile.open (configPath());
+    std::string line;
+    std::cout << "localhost " << localhost.id << std::endl;
+    for(size_t i = 0; i <= localhost.id; i++){
+      std::getline(configFile, line);
+    }
+    std::cout << "Line: " << line << std::endl;
+    std::istringstream iss(line);
+    unsigned long pid;
+    while(iss >> pid) {
+      std::cout << pid << std::endl;
+      dependencies.push_back(pid);
+    }
+    configFile.close();
+    return dependencies;
   }
   std::vector<Host> hosts() {
     std::ifstream hostsFile(hostsPath());

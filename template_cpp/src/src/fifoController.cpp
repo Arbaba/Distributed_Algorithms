@@ -27,7 +27,7 @@ void FIFOController::groupedBroadcast(unsigned long n){
         int iCasted = static_cast<int>(i);
         Packet pkt(localhost.id, localhost.id,  iCasted, PacketType::FIFO, false);
         if(this->vectorClock.size() > 0){
-            for(size_t pid = 0; pid < vectorClock.size(); pid++){
+            for(auto pid: this->localhost.dependencies){
                 pkt.vectorClock[pid] =  vectorClock[pid];
             }
         }

@@ -28,7 +28,7 @@ struct Packet{
     PacketType type;
     bool ack;
     unsigned long destinationID;
-    int vectorClock[128];
+    int vectorClock[128] = {};
     bool equals(const Packet p) const{
         return peerID == p.peerID 
             && payload == p.payload
