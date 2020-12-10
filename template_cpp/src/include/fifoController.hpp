@@ -12,6 +12,8 @@ class FIFOController{
 
         void deliver(Packet pkt);
         void stop();
+        std::vector<int> vectorClock;
+
     private:
         void groupedBroadcast(unsigned long n);
         unsigned long nPacketsPerBroadcast;
@@ -22,7 +24,6 @@ class FIFOController{
         std::function<void(Packet)> fifoDeliver;
         std::function<void(Packet)> broadcastCB;
         Coordinator* coordinator;
-
         unsigned long nLocalDeliveries;
         unsigned long counter;
 };

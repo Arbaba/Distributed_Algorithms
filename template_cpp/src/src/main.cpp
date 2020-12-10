@@ -10,6 +10,8 @@
 #include "urb.hpp"
 #include "fifob.hpp"
 #include "fifoController.hpp"
+#include "lcb.hpp"
+
 #include "hello.h"
 #include <signal.h>
 //added includes for perfect links
@@ -23,6 +25,8 @@ std::vector<Packet> broadcasts;
 std::vector<Packet> receivedPackets;
 unsigned long nlocalDeliveries = 0;
 FIFOController* fifoController = NULL;
+LCBroadcast* lcb = NULL;
+
 std::ofstream outputFile;
 std::mutex receivedMutex;
 
@@ -38,6 +42,12 @@ static void signalHandler(int signum) {
   if(fifoController != NULL){
     fifoController->stop();
   }
+  if(lcb != NULL){
+    lcb->stop();
+  }
+
+
+  
   // write/flush output file if necessary
   std::cout << "Writing output.\n";
    // cleanup and close up stuff here  
@@ -153,16 +163,11 @@ int main(int argc, char **argv) {
   struct sockaddr_in server;
   std::memset(&server, 0, sizeof(server));
   enum BROADCASTTYPE{
-    PERFECTLINKTYPE, BEBTYPE, URBTYPE, FIFOTYPE
+    PERFECTLINKTYPE, BEBTYPE, URBTYPE, FIFOTYPE, LCBTYPE
   };
-  BROADCASTTYPE btype = BROADCASTTYPE::FIFOTYPE;
+  BROADCASTTYPE btype = BROADCASTTYPE::LCBTYPE;
   Coordinator coordinator(parser.id(), barrier, signal);
-  fifoController = new FIFOController(localhost,
-                                                 parser.getPeers(),
-                                                 [localhost](Packet p){ /*if(p.payload % 50 ==0) std::cout << "Received " << p.payload << "from process" << p.peerID << ";" << "\n"; */receivePacket(p, localhost.id);},
-                                                 [localhost](Packet p){broadcasts.push_back(p);},
-                                                 &coordinator
-                                                 );
+
 
   std::cout << "Waiting for all processes to finish initialization\n\n";
   coordinator.waitOnBarrier();
@@ -218,9 +223,25 @@ int main(int argc, char **argv) {
       
     case FIFOTYPE:
       {
-
+      fifoController = new FIFOController(localhost,
+                                          parser.getPeers(),
+                                          [localhost](Packet p){ /*if(p.payload % 50 ==0) std::cout << "Received " << p.payload << "from process" << p.peerID << ";" << "\n"; */receivePacket(p, localhost.id);},
+                                          [localhost](Packet p){broadcasts.push_back(p);},
+                                          &coordinator
+                                          );
         std::cout << "Broadcasting fifo" << std::endl;
             fifoController->broadcast(nMessages);    
+      }
+      break;
+      case LCBTYPE:
+      {
+        lcb = new LCBroadcast(localhost,
+                              parser.getPeers(),
+                              [localhost](Packet p){ /*if(p.payload % 50 ==0) std::cout << "Received " << p.payload << "from process" << p.peerID << ";" << "\n"; */receivePacket(p, localhost.id);},
+                              [localhost](Packet p){broadcasts.push_back(p);},
+                              &coordinator
+                              );
+        lcb->broadcast(nMessages);
       }
       break;
     default:

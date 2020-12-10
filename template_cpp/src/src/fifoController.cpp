@@ -24,9 +24,14 @@ void FIFOController::groupedBroadcast(unsigned long n){
     for(unsigned long i = counter; i <= maxPackets && i < counter + n; i++){
         //std::cout << "i " << i << " counter + n" << counter + n << std::endl;
         //counter += 1;
-        Packet pkt(localhost.id, localhost.id,  static_cast<int>(i), PacketType::FIFO, false);
+        int iCasted = static_cast<int>(i);
+        Packet pkt(localhost.id, localhost.id,  iCasted, PacketType::FIFO, false);
+        if(this->vectorClock.size() > 0){
+            for(size_t pid = 0; pid < vectorClock.size(); pid++){
+                pkt.vectorClock[pid] =  vectorClock[pid];
+            }
+        }
         //std::cout << "Send" << pkt.toString() << std::endl;
-
         broadcastCB(pkt);
         fifo->broadcast(pkt);
     }
@@ -34,6 +39,7 @@ void FIFOController::groupedBroadcast(unsigned long n){
 }
 void FIFOController::deliver(Packet pkt){
     fifoDeliver(pkt);
+    std::cerr << pkt.vectorClock[0] << std::endl;
     if(pkt.peerID == localhost.id){
         nLocalDeliveries += 1;
         if(nLocalDeliveries == (maxPackets + 1)){
