@@ -12,7 +12,11 @@ LCBroadcast::LCBroadcast(Parser::Host localhost,
     //upon fifobroadcast deliver and then call broadcastCB
     this->broadcastCB = [this, broadcastCB_](Packet pkt){
         this->lcbDeliver(pkt);
-        fifoController->vectorClock[pkt.peerID] += 1;
+        std::cerr << "Deliver " << pkt.toString() << std::endl;
+        for(size_t i = 0; i < fifoController->vectorClock.size(); i++){
+            std::cerr << i << " " << fifoController->vectorClock[i] << " " << pkt.vectorClock[i] << std::endl;
+        }
+        fifoController->vectorClock[pkt.peerID - 1] += 1;
         broadcastCB_(pkt);
     };
     this->fifoController = new FIFOController(localhost, peers, fifoCB, broadcastCB, coordinator);
@@ -50,8 +54,13 @@ void LCBroadcast::deliver(Packet pkt){
                 if(canDeliver){
                     Packet toDeliver = *it;
                     pending[pkt.peerID].erase(it);
+                    std::cerr << "Deliver " << pkt.toString() << std::endl;
+                    for(size_t i = 0; i < fifoController->vectorClock.size(); i++){
+                        std::cerr << i << " " << fifoController->vectorClock[i] << " " << pkt.vectorClock[i] << std::endl;
+                    }
+             
                     lcbDeliver(toDeliver);
-                    fifoController->vectorClock[pkt.peerID] += 1;
+                    fifoController->vectorClock[pkt.peerID - 1] += 1;
                     checkPending = true;
                 }else {
                     it++;

@@ -39,7 +39,6 @@ void FIFOController::groupedBroadcast(unsigned long n){
 }
 void FIFOController::deliver(Packet pkt){
     fifoDeliver(pkt);
-    std::cerr << pkt.vectorClock[0] << std::endl;
     if(pkt.peerID == localhost.id){
         nLocalDeliveries += 1;
         if(nLocalDeliveries == (maxPackets + 1)){
