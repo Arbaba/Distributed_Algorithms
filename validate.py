@@ -8,7 +8,6 @@ import tempfile
 import threading, subprocess
 import barrier, finishedSignal
 
-
 import signal
 import random
 import time
@@ -202,16 +201,83 @@ class FifoBroadcastValidation(Validation):
         
         return True
 
+
 class LCausalBroadcastValidation(Validation):
-    def __init__(self, processes, outputDir, causalRelationships):
-        super().__init__(processes, outputDir)
-
+    def __init__(self, processes, messages, outputDir, causalRelationships):
+        super().__init__(processes, messages, outputDir)
+        self.vectorClocksPerProcess = {}
+        self.deliveriesPerProcess = {} 
+        for i in range(0, processes + 1):
+            self.deliveriesPerProcess[i] = []
     def generateConfig(self):
-        raise NotImplementedError()
+        hosts = tempfile.NamedTemporaryFile(mode='w')
+        config = tempfile.NamedTemporaryFile(mode='w')
 
+        for i in range(1, self.processes + 1):
+            hosts.write("{} localhost {}\n".format(i, PROCESSES_BASE_IP+i))
+
+        hosts.flush()
+
+        config.write("{}\n".format(self.messages))
+        config.flush()
+
+        return (hosts, config)
     def checkProcess(self, pid):
-        raise NotImplementedError()
+        filePath = os.path.join(self.outputDirPath, 'proc{:02d}.output'.format(pid))
 
+        i = 1
+        nextMessage = defaultdict(lambda : 1)
+        filename = os.path.basename(filePath)
+        nLines = 0
+        tmpVectorClock = [0 for p in range(int(self.processes))]
+        vectorClocks = {}
+
+        with open(filePath) as f:
+            for lineNumber, line in enumerate(f):
+                tokens = line.split()
+
+                # Check broadcast
+                if tokens[0] == 'b':
+                    msg = int(tokens[1])
+                    if msg != i:
+                        print("File {}, Line {}: Messages broadcast out of order. Expected message {} but broadcast message {}".format(filename, lineNumber, i, msg))
+                        return False
+                    i += 1
+                nLines += 1
+                # Check delivery
+                if tokens[0] == 'd':
+                    sender = int(tokens[1])
+                    msg = int(tokens[2])
+                    if msg != nextMessage[sender]:
+                        print("File {}, Line {}: Message delivered out of order. Expected message {}, but delivered message {}".format(filename, lineNumber, nextMessage[sender], msg))
+                        return False
+                    else:
+                        nextMessage[sender] = msg + 1
+                    #if sender == int(pid):
+                    vectorClocks['{} {}'.format(sender, msg)] = list(tmpVectorClock)
+                    tmpVectorClock[sender - 1] += 1
+                    #print(sender, pid)
+
+                    self.deliveriesPerProcess[pid].append({'sender': sender, 'msg': msg})
+                    
+        if nLines != self.messages * (self.processes + 1):
+            print("P{}: Found {} messages instead of {}".format(pid, nLines, self.messages * (self.processes + 1)))
+        #print(vectorClocks)
+        self.vectorClocksPerProcess[pid] = vectorClocks
+        return True
+    def checkCausality(self):
+        for pid, deliveries in self.deliveriesPerProcess.items():
+            for delivery in deliveries:
+                senderClock = self.vectorClocksPerProcess[delivery['sender']]['{} {}'.format(delivery['sender'], delivery['msg'])]
+                pClock =  self.vectorClocksPerProcess[pid]['{} {}'.format(delivery['sender'], delivery['msg'])]
+                for idx, (p, s) in enumerate(zip(pClock, senderClock)):
+                    if p < s:
+                        print('Inconsistency found for delivery {} at pid {}. \nProcess clock: {}  \nsender clock: {}'.format(delivery, pid, pClock, senderClock))
+                        return False
+        return True      
+    def checkAll(self, continueOnError=True):
+        cond1 = super(LCausalBroadcastValidation, self).checkAll(continueOnError)
+        return cond1 and self.checkCausality()       
 class StressTest:
     def __init__(self, procs, concurrency, attempts, attemptsRatio):
         self.processes = len(procs)
