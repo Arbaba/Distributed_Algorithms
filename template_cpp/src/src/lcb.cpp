@@ -11,13 +11,13 @@ LCBroadcast::LCBroadcast(Parser::Host localhost,
     this->localhost = localhost;
     //upon fifobroadcast deliver and then call broadcastCB
     this->broadcastCB = [this, broadcastCB_](Packet pkt){
+        broadcastCB_(pkt);
         this->lcbDeliver(pkt);
         std::cerr << "Deliver " << pkt.toString() << std::endl;
         for(size_t i = 0; i < fifoController->vectorClock.size(); i++){
-            std::cerr << i << " " << fifoController->vectorClock[i] << " " << pkt.vectorClock[i] << std::endl;
+            std::cerr << i + 1 << " " << fifoController->vectorClock[i] << " " << pkt.vectorClock[i] << std::endl;
         }
         fifoController->vectorClock[pkt.peerID - 1] += 1;
-        broadcastCB_(pkt);
     };
     this->fifoController = new FIFOController(localhost, peers, fifoCB, broadcastCB, coordinator);
     this->lcbDeliver = lcbDeliver;

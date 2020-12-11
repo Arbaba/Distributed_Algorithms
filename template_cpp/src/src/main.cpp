@@ -23,12 +23,13 @@
 
 std::vector<Packet> broadcasts;
 std::vector<Packet> receivedPackets;
-unsigned long nlocalDeliveries = 0;
 FIFOController* fifoController = NULL;
 LCBroadcast* lcb = NULL;
 
+std::vector<std::string> logs;
 std::ofstream outputFile;
 std::mutex receivedMutex;
+std::mutex logsMutex;
 
 static void signalHandler(int signum) {
   // reset signal handlers to default
@@ -52,14 +53,11 @@ static void signalHandler(int signum) {
   std::cout << "Writing output.\n";
    // cleanup and close up stuff here  
    // terminate program  
-  for(auto && pkt: broadcasts){
-    outputFile << "b " << pkt.payload << std::endl;
+  logsMutex.lock();
+  for(auto && log: logs){
+    outputFile << log ;
   }
-  receivedMutex.lock();
-  for(auto && pkt: receivedPackets){
-    outputFile << "d " << pkt.peerID << " " << pkt.payload << std::endl;
-  }
-  receivedMutex.unlock();
+  logsMutex.unlock();
   outputFile.close();
   exit(0);  
 }
@@ -79,14 +77,17 @@ static void stop(int) {
   exit(0);
 }
 
-
+static void broadcastCB(Packet p){
+  logsMutex.lock();
+  std::string log =  "b " + std::to_string(p.payload) +  "\n";
+  logs.push_back(log);
+  logsMutex.unlock();
+}
 static void receivePacket(Packet p, unsigned long localID){
-  receivedMutex.lock();
-  receivedPackets.push_back(p);
-  if(p.peerID == localID){
-    nlocalDeliveries++;
-  }
-  receivedMutex.unlock();
+  logsMutex.lock();
+  std::string log = "d " + std::to_string(p.peerID) + " " + std::to_string(p.payload) + "\n";
+  logs.push_back(log);
+  logsMutex.unlock();
 }
 
 int main(int argc, char **argv) {
@@ -226,7 +227,7 @@ int main(int argc, char **argv) {
       fifoController = new FIFOController(localhost,
                                           parser.getPeers(),
                                           [localhost](Packet p){ /*if(p.payload % 50 ==0) std::cout << "Received " << p.payload << "from process" << p.peerID << ";" << "\n"; */receivePacket(p, localhost.id);},
-                                          [localhost](Packet p){broadcasts.push_back(p);},
+                                          [localhost](Packet p){broadcastCB(p);},
                                           &coordinator
                                           );
         std::cout << "Broadcasting fifo" << std::endl;
@@ -238,7 +239,7 @@ int main(int argc, char **argv) {
         lcb = new LCBroadcast(localhost,
                               parser.getPeers(),
                               [localhost](Packet p){ /*if(p.payload % 50 ==0) std::cout << "Received " << p.payload << "from process" << p.peerID << ";" << "\n"; */receivePacket(p, localhost.id);},
-                              [localhost](Packet p){broadcasts.push_back(p);},
+                              [localhost](Packet p){broadcastCB(p);},
                               &coordinator
                               );
         lcb->broadcast(nMessages);

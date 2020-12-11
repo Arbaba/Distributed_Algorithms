@@ -28,7 +28,8 @@ void FIFOController::groupedBroadcast(unsigned long n){
         Packet pkt(localhost.id, localhost.id,  iCasted, PacketType::FIFO, false);
         if(this->vectorClock.size() > 0){
             for(auto pid: this->localhost.dependencies){
-                pkt.vectorClock[pid] =  vectorClock[pid];
+                std::cout << "dep " << pid << " " << vectorClock[pid -1 ];
+                pkt.vectorClock[pid - 1] =  vectorClock[pid - 1];
             }
         }
         //std::cout << "Send" << pkt.toString() << std::endl;

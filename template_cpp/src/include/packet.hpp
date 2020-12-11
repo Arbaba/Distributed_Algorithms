@@ -57,7 +57,18 @@ struct Packet{
         }
         return string.str();
     }
-
+    std::string vectorClockString(int vectorClock[]){
+        std::ostringstream str;
+        str << "[";
+        for(size_t i = 0; i < 128; ++i){
+            if(i > 0){
+                str << ", ";
+            }
+            str << vectorClock[i];
+        }
+        str << "]";
+        return str.str();
+    }
     std::string toString()  {
         std::ostringstream str;
         str << "Packet(peerID:" << this->peerID 
@@ -66,6 +77,7 @@ struct Packet{
                                 << " payload: " << this->payload
                                 << " type: " << typeToString(this->type)
                                 << " ack: " << this->ack
+                                << " vector clock: " << vectorClockString(vectorClock)
                                 << " )";
         return str.str();
     }

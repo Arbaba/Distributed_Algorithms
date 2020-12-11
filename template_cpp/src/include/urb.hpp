@@ -33,5 +33,6 @@ class UniformBroadcast {
         std::vector<Packet> delivered;
         std::vector<Packet> received;
         std::mutex lock;
+        size_t nProcesses;
 
 };

@@ -3,7 +3,7 @@
 UniformBroadcast::UniformBroadcast(Parser::Host localhost, std::vector<Parser::Host> peers, std::function<void(Packet)> urbDeliver){
     this->localhost = localhost;
     std::function<void(Packet)> deliveryCB = [this](Packet pkt){this->bebDeliver(pkt);};
-
+    nProcesses = peers.size() + 1;
     beb = new BeBroadcast(localhost, peers, deliveryCB);   
     this->urbDeliver = urbDeliver;
     for(auto &&peer: peers){
@@ -42,6 +42,10 @@ void UniformBroadcast::bebDeliver(Packet pkt){
    if(!isFwded){
        addToForwarded(pkt);
        Packet ack(pkt.peerID, localhost.id , pkt.payload,pkt.type,pkt.ack);
+       std::cout << "nProcesses" << nProcesses <<std::endl;
+       for(size_t i = 0; i < nProcesses; i++){
+           ack.vectorClock[i] = pkt.vectorClock[i];
+       }
        storeAck(ack);
        //std::cout << "send pkt " << ack.peerID << " " << ack.senderID << " " << ack.payload << " " << "lid " << localhost.id << std::endl;
 
