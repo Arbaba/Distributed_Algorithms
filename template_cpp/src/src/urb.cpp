@@ -42,29 +42,21 @@ void UniformBroadcast::bebDeliver(Packet pkt){
    if(!isFwded){
        addToForwarded(pkt);
        Packet ack(pkt.peerID, localhost.id , pkt.payload,pkt.type,pkt.ack);
-       std::cout << "nProcesses" << nProcesses <<std::endl;
        for(size_t i = 0; i < nProcesses; i++){
            ack.vectorClock[i] = pkt.vectorClock[i];
        }
        storeAck(ack);
-       //std::cout << "send pkt " << ack.peerID << " " << ack.senderID << " " << ack.payload << " " << "lid " << localhost.id << std::endl;
 
        beb->bebBroadcast(ack);
    }
-   /*
-    tryDelivery(pkt);
-    lock.unlock();
-   */
+
     bool d = canDeliver(pkt);
     if(d){
         addToDelivered(pkt);
     }
     lock.unlock();
     if(d){
-        //std::cout << "URBdeliver" << pkt.peerID << " " << pkt.payload  << std::endl;
-
         this->urbDeliver(pkt);
-
     }
 }
 

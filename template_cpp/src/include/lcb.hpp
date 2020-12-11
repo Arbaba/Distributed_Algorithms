@@ -18,5 +18,5 @@ class LCBroadcast{
         std::function<void(Packet)> lcbDeliver;
         std::function<void(Packet)> broadcastCB;
         std::map<unsigned long, std::vector<Packet>> pending;
-
+        size_t nProcesses;
 };

@@ -22,24 +22,24 @@ void FIFOController::broadcast(unsigned long n){
 
 void FIFOController::groupedBroadcast(unsigned long n){
     for(unsigned long i = counter; i <= maxPackets && i < counter + n; i++){
-        //std::cout << "i " << i << " counter + n" << counter + n << std::endl;
-        //counter += 1;
+        mtx.lock();
         int iCasted = static_cast<int>(i);
         Packet pkt(localhost.id, localhost.id,  iCasted, PacketType::FIFO, false);
         if(this->vectorClock.size() > 0){
             for(auto pid: this->localhost.dependencies){
-                std::cout << "dep " << pid << " " << vectorClock[pid -1 ];
                 pkt.vectorClock[pid - 1] =  vectorClock[pid - 1];
             }
         }
-        //std::cout << "Send" << pkt.toString() << std::endl;
         broadcastCB(pkt);
+        mtx.unlock();
         fifo->broadcast(pkt);
     }
     counter += n ;
 }
 void FIFOController::deliver(Packet pkt){
+    mtx.lock();
     fifoDeliver(pkt);
+    mtx.unlock();
     if(pkt.peerID == localhost.id){
         nLocalDeliveries += 1;
         if(nLocalDeliveries == (maxPackets + 1)){

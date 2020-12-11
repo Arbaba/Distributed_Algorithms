@@ -175,35 +175,7 @@ int main(int argc, char **argv) {
   //Finished broadcasting will be called by the fifoController once all packets have been broadcasted.
   std::cout << "Broadcasting messages...\n\n";
   switch (btype){
-    /*
-    case PERFECTLINKTYPE:
-      {
-        PerfectLink perfectLink(localhost.ip, localhost.port, [](Packet p){ std::cout << "Received " << p.payload << "from process" << p.peerID << std::endl; });
-          while(true){
-            for(Parser::Host peer: parser.getPeers()){
-              Packet pkt(peer.id, peer.id, 380, PacketType::FIFO, true);
-              perfectLink.send(&pkt, peer);
-            }
-          } 
-        break;
-      }
-    
-    case BEBTYPE:
-      {
-        BeBroadcast bebroadcast = BeBroadcast(localhost, parser.getPeers(), [](Packet p){ std::cout << "Received " << p.payload << "from process" << p.peerID << std::endl; });
-        std::cout << "Broadcasting done" << std::endl;
-        while(true){
 
-              for(Parser::Host peer: parser.getPeers()){
-                Packet pkt(peer.id, peer.id, 380, PacketType::FIFO, true);
-                bebroadcast.bebBroadcast(pkt);
-              }
-       
-        }
-          std::cout << "Broadcasting done" << std::endl;
-      }
-      break;
-*/
     case URBTYPE:
       {
         UniformBroadcast urb = UniformBroadcast(localhost, parser.getPeers(), [](Packet p){ std::cout << "Received " << p.payload << "from process " << p.peerID <<";"<< std::endl; });

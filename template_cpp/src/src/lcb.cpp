@@ -9,20 +9,17 @@ LCBroadcast::LCBroadcast(Parser::Host localhost,
     //upon fifo delivery trigger LCB delivery
     std::function<void(Packet)> fifoCB = [this](Packet pkt){this->deliver(pkt);};
     this->localhost = localhost;
-    //upon fifobroadcast deliver and then call broadcastCB
+    //upon fifobroadcast log the broadcastCB - deliver - increase vector clock
     this->broadcastCB = [this, broadcastCB_](Packet pkt){
         broadcastCB_(pkt);
         this->lcbDeliver(pkt);
-        std::cerr << "Deliver " << pkt.toString() << std::endl;
-        for(size_t i = 0; i < fifoController->vectorClock.size(); i++){
-            std::cerr << i + 1 << " " << fifoController->vectorClock[i] << " " << pkt.vectorClock[i] << std::endl;
-        }
         fifoController->vectorClock[pkt.peerID - 1] += 1;
     };
     this->fifoController = new FIFOController(localhost, peers, fifoCB, broadcastCB, coordinator);
     this->lcbDeliver = lcbDeliver;
     //Initialize vector clock including self (+ 1)
-    for(size_t i = 0; i < peers.size() + 1; i++){
+    nProcesses = peers.size() + 1;
+    for(size_t i = 0; i < nProcesses; i++){
         this->fifoController->vectorClock.push_back(0);
     }
     //initialize pending
@@ -37,14 +34,13 @@ void LCBroadcast::broadcast(unsigned long n){
 
 void LCBroadcast::deliver(Packet pkt){
     if(pkt.peerID != localhost.id){
-        std::cout << "deliver " <<  pkt.toString() << std::endl;
         pending.at(pkt.peerID).push_back(pkt);
         bool checkPending = true;
         while(checkPending){
             checkPending = false;
             for(auto it = pending[pkt.peerID].begin(); it!= pending[pkt.peerID].end();){
                 bool canDeliver = true;
-                for(size_t i = 0; i < fifoController->vectorClock.size(); i++){
+                for(size_t i = 0; i < nProcesses; i++){
                     if(fifoController->vectorClock[i] < pkt.vectorClock[i]){
                         canDeliver = false;
                         break;
@@ -54,10 +50,6 @@ void LCBroadcast::deliver(Packet pkt){
                 if(canDeliver){
                     Packet toDeliver = *it;
                     pending[pkt.peerID].erase(it);
-                    std::cerr << "Deliver " << pkt.toString() << std::endl;
-                    for(size_t i = 0; i < fifoController->vectorClock.size(); i++){
-                        std::cerr << i << " " << fifoController->vectorClock[i] << " " << pkt.vectorClock[i] << std::endl;
-                    }
              
                     lcbDeliver(toDeliver);
                     fifoController->vectorClock[pkt.peerID - 1] += 1;

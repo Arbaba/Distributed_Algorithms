@@ -4,6 +4,7 @@
 #include "packet.hpp"
 #include "fifob.hpp"
 #include "parser.hpp"
+#include <mutex>
 class FIFOController{
     public:
         FIFOController(){}
@@ -26,4 +27,5 @@ class FIFOController{
         Coordinator* coordinator;
         unsigned long nLocalDeliveries;
         unsigned long counter;
+        std::mutex mtx;
 };
