@@ -35,7 +35,7 @@ class TC:
 
         cmd1 = 'tc qdisc add dev {} root netem 2>/dev/null'.format(self.interface)
         cmd2 = 'tc qdisc change dev {} root netem delay {} {} loss {} {} reorder {} {}'.format(self.interface, *self.losses['delay'], *self.losses['loss'], *self.losses['reordering'])
-
+        """
         if self.needSudo:
             os.system("echo {} | sudo -S {}".format(self.sudoPassword, cmd1))
             os.system("echo {} | sudo -S {}".format(self.sudoPassword, cmd2))
@@ -44,7 +44,7 @@ class TC:
             os.system(cmd2)
 
         atexit.register(self.cleanup)
-
+        """
     def __str__(self):
         ret = """\
         Interface: {}
@@ -259,6 +259,9 @@ class LCausalBroadcastValidation(Validation):
                     if msg != nextMessage[sender]:
                         print("File {}, Line {}: Message delivered out of order. Expected message {}, but delivered message {}".format(filename, lineNumber, nextMessage[sender], msg))
                         return False
+                    if sender == pid and i <= msg:
+                        print("File {}, Line {}: Message delivered before the broadcast. Last broadcast was message {}, but delivered message {}".format(filename, lineNumber, i - 1, msg))
+
                     else:
                         nextMessage[sender] = msg + 1
                     #map the message to the current vector clock
@@ -282,8 +285,10 @@ class LCausalBroadcastValidation(Validation):
                 senderClock = self.vectorClocksPerProcess[senderId]['{} {}'.format(senderId, msg)]
                 pClock =  self.vectorClocksPerProcess[pid]['{} {}'.format(senderId, msg)]
                 for idx, (p, s) in enumerate(zip(pClock, senderClock)):
-                    if idx in self.causalRelationships[senderId] and  p < s:
+                    if idx + 1 in self.causalRelationships[senderId] and  p < s:
                         print('Inconsistency found for delivery {} at pid {}. \nProcess clock: {}  \nsender clock: {}'.format(delivery, pid, pClock, senderClock))
+                        print('Index {}: {} < {}'.format(idx + 1, p, s))
+                        print('Sender dependencies {}'.format(self.causalRelationships[senderId]))
                         return False
         return True      
     def checkAll(self, continueOnError=True):
@@ -448,7 +453,8 @@ def main(processes, messages, runscript, broadcastType, logsDir, testConfig):
         validation = LCausalBroadcastValidation(processes, messages, logsDir, causalRelationships)
 
     hostsFile, configFile = validation.generateConfig()
-
+    result = False
+    procs = None
     try:
         # Start the processes and get their PIDs
         procs = startProcesses(processes, runscript, hostsFile.name, configFile.name, logsDir)
@@ -484,6 +490,7 @@ def main(processes, messages, runscript, broadcastType, logsDir, testConfig):
 
         unterminated = st.remainingUnterminatedProcesses()
         if unterminated is not None:
+            #time.sleep(5)
             input('Hit `Enter` to terminate the remaining processes with logicalPIDs {}.'.format(unterminated))
             st.terminateAllProcesses()
 
@@ -501,13 +508,14 @@ def main(processes, messages, runscript, broadcastType, logsDir, testConfig):
         [p.join() for p in monitors]
 
         input('Hit `Enter` to validate the output')
-        print("Result of validation: {}".format(validation.checkAll()))
+        result = validation.checkAll()
+        print("Result of validation: {}".format(result))
 
     finally:
         if procs is not None:
             for _, p in procs:
                 p.kill()
-
+        return result
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
